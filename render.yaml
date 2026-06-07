@@ -3,7 +3,7 @@ services:
     name: rgukt-portal
     env: node
     plan: free
-    buildCommand: pnpm install && pnpm --filter @workspace/student-portal run build && pnpm --filter @workspace/api-server run build
+    buildCommand: pnpm install --include=dev && pnpm --filter ...
     startCommand: node artifacts/api-server/dist/index.mjs
     envVars:
       - key: NODE_ENV
