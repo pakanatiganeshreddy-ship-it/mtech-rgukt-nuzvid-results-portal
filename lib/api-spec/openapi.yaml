@@ -1,0 +1,586 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: RGUKT M.Tech Results Portal API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: auth
+    description: Authentication
+  - name: students
+    description: Student management
+  - name: results
+    description: Results management
+  - name: admin
+    description: Admin operations
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /auth/student/login:
+    post:
+      operationId: studentLogin
+      tags: [auth]
+      summary: Student login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StudentLoginInput"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentSession"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/admin/login:
+    post:
+      operationId: adminLogin
+      tags: [auth]
+      summary: Admin login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminLoginInput"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSession"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current session info
+      responses:
+        "200":
+          description: Current session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionInfo"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /students:
+    get:
+      operationId: listStudents
+      tags: [students]
+      summary: List all students (admin)
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: branch
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Students list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Student"
+    post:
+      operationId: createStudent
+      tags: [students]
+      summary: Create a student (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StudentInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Student"
+
+  /students/{studentId}:
+    get:
+      operationId: getStudent
+      tags: [students]
+      summary: Get student by ID
+      parameters:
+        - name: studentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Student details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Student"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateStudent
+      tags: [students]
+      summary: Update student (admin)
+      parameters:
+        - name: studentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StudentUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Student"
+
+  /students/{studentId}/results:
+    get:
+      operationId: getStudentResults
+      tags: [results]
+      summary: Get all results for a student
+      parameters:
+        - name: studentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Student results grouped by semester
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentResultsSummary"
+
+  /results:
+    get:
+      operationId: listResults
+      tags: [results]
+      summary: List all results (admin)
+      parameters:
+        - name: studentId
+          in: query
+          schema:
+            type: string
+        - name: semester
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Results list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Result"
+
+  /admin/upload-pdf:
+    post:
+      operationId: uploadResultPdf
+      tags: [admin]
+      summary: Upload result PDF and extract data
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/PdfUploadInput"
+      responses:
+        "200":
+          description: Upload result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PdfUploadResult"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/uploads:
+    get:
+      operationId: listUploads
+      tags: [admin]
+      summary: List all uploaded PDFs
+      responses:
+        "200":
+          description: Uploads list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PdfUpload"
+
+  /admin/stats:
+    get:
+      operationId: getAdminStats
+      tags: [admin]
+      summary: Get admin dashboard statistics
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStats"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success
+
+    StudentLoginInput:
+      type: object
+      properties:
+        studentId:
+          type: string
+        password:
+          type: string
+      required:
+        - studentId
+        - password
+
+    AdminLoginInput:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required:
+        - username
+        - password
+
+    StudentSession:
+      type: object
+      properties:
+        studentId:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+      required:
+        - studentId
+        - name
+        - role
+
+    AdminSession:
+      type: object
+      properties:
+        username:
+          type: string
+        role:
+          type: string
+      required:
+        - username
+        - role
+
+    SessionInfo:
+      type: object
+      properties:
+        role:
+          type: string
+        id:
+          type: string
+        name:
+          type: string
+      required:
+        - role
+        - id
+        - name
+
+    Student:
+      type: object
+      properties:
+        id:
+          type: integer
+        studentId:
+          type: string
+        name:
+          type: string
+        branch:
+          type: string
+        batch:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - studentId
+        - name
+        - branch
+        - batch
+        - createdAt
+
+    StudentInput:
+      type: object
+      properties:
+        studentId:
+          type: string
+        name:
+          type: string
+        branch:
+          type: string
+        batch:
+          type: string
+        password:
+          type: string
+      required:
+        - studentId
+        - name
+        - branch
+        - batch
+
+    StudentUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        branch:
+          type: string
+        batch:
+          type: string
+
+    Result:
+      type: object
+      properties:
+        id:
+          type: integer
+        studentId:
+          type: string
+        semester:
+          type: integer
+        subjectCode:
+          type: string
+        subjectName:
+          type: string
+        credits:
+          type: number
+        grade:
+          type: string
+        gradePoint:
+          type: number
+        createdAt:
+          type: string
+      required:
+        - id
+        - studentId
+        - semester
+        - subjectCode
+        - subjectName
+        - credits
+        - grade
+        - gradePoint
+        - createdAt
+
+    SemesterResult:
+      type: object
+      properties:
+        semester:
+          type: integer
+        sgpa:
+          type: number
+        totalCredits:
+          type: number
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/Result"
+      required:
+        - semester
+        - sgpa
+        - totalCredits
+        - results
+
+    StudentResultsSummary:
+      type: object
+      properties:
+        student:
+          $ref: "#/components/schemas/Student"
+        semesters:
+          type: array
+          items:
+            $ref: "#/components/schemas/SemesterResult"
+        cgpa:
+          type: number
+      required:
+        - student
+        - semesters
+        - cgpa
+
+    PdfUploadInput:
+      type: object
+      properties:
+        filename:
+          type: string
+      required:
+        - filename
+
+    PdfUploadResult:
+      type: object
+      properties:
+        message:
+          type: string
+        extracted:
+          type: integer
+        inserted:
+          type: integer
+        updated:
+          type: integer
+        studentsAutoCreated:
+          type: integer
+        errors:
+          type: integer
+        uploadId:
+          type: integer
+      required:
+        - message
+        - extracted
+        - inserted
+        - updated
+        - studentsAutoCreated
+        - errors
+        - uploadId
+
+    PdfUpload:
+      type: object
+      properties:
+        id:
+          type: integer
+        filename:
+          type: string
+        uploadedAt:
+          type: string
+        recordsExtracted:
+          type: integer
+        recordsInserted:
+          type: integer
+        studentsCreated:
+          type: integer
+      required:
+        - id
+        - filename
+        - uploadedAt
+        - recordsExtracted
+        - recordsInserted
+        - studentsCreated
+
+    AdminStats:
+      type: object
+      properties:
+        totalStudents:
+          type: integer
+        totalResults:
+          type: integer
+        totalUploads:
+          type: integer
+        branches:
+          type: array
+          items:
+            type: string
+        recentUploads:
+          type: array
+          items:
+            $ref: "#/components/schemas/PdfUpload"
+      required:
+        - totalStudents
+        - totalResults
+        - totalUploads
+        - branches
+        - recentUploads
