@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Shield } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import campusBg from "@assets/RGUKTN_1780635783963.jpg";
+
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -59,11 +59,8 @@ export default function AdminLogin() {
     <div
       className="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative"
       style={{
-        backgroundImage: `url(${campusBg})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat",
-      }}
+  background: "linear-gradient(135deg, #1e3a5f 0%, #2d6a4f 100%)",
+}}
     >
       <div className="absolute inset-0 bg-black/65" />
 
