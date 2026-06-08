@@ -56,9 +56,8 @@ authRouter.post("/admin/login", async (req, res) => {
 });
 
 authRouter.post("/logout", (req, res) => {
-  req.session.destroy(() => {
-    res.json({ success: true });
-  });
+  req.session = null;
+  res.json({ success: true });
 });
 
 authRouter.get("/me", (req, res) => {
