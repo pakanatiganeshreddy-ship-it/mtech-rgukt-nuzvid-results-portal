@@ -1,9 +1,7 @@
 import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
-import session from "express-session";
-import connectPgSimple from "connect-pg-simple";
-import { Pool } from "pg";
+import cookieSession from "cookie-session";
 import path from "path";
 import router from "./routes";
 import { logger } from "./lib/logger";
@@ -30,28 +28,14 @@ app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const PgSession = connectPgSimple(session);
-const pgPool = new Pool({ connectionString: process.env.DATABASE_URL });
-
-pgPool.on("error", (err) => {
-  logger.error({ err }, "Unexpected error on idle pg client");
-});
-
 app.use(
-  session({
-    store: new PgSession({
-      pool: pgPool,
-      createTableIfMissing: true,
-    }),
+  cookieSession({
+    name: "session",
     secret: process.env.SESSION_SECRET ?? "fallback-dev-secret",
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: process.env.NODE_ENV === "production",
-      httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000,
-      sameSite: "lax",
-    },
+    maxAge: 24 * 60 * 60 * 1000,
+    secure: process.env.NODE_ENV === "production",
+    httpOnly: true,
+    sameSite: "lax",
   }),
 );
 
