@@ -3,7 +3,7 @@ import cors from "cors";
 import pinoHttp from "pino-http";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
-import pg from "pg";
+import { Pool } from "pg";
 import path from "path";
 import router from "./routes";
 import { logger } from "./lib/logger";
@@ -31,7 +31,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const PgSession = connectPgSimple(session);
-const pgPool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+const pgPool = new Pool({ connectionString: process.env.DATABASE_URL });
+
+pgPool.on("error", (err) => {
+  logger.error({ err }, "Unexpected error on idle pg client");
+});
 
 app.use(
   session({
