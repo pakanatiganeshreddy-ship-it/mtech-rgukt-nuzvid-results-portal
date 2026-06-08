@@ -2,16 +2,13 @@ import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import session from "express-session";
-import path from "path";
-import { fileURLToPath } from "url";
 import router from "./routes";
 import { logger } from "./lib/logger";
 
-if (!process.env.SESSION_SECRET) {
-  throw new Error("SESSION_SECRET environment variable is required");
-}
-
 const app: Express = express();
+
+// Trust Render's reverse proxy (required for secure cookies over HTTPS)
+app.set("trust proxy", 1);
 
 app.use(
   pinoHttp({
@@ -32,32 +29,30 @@ app.use(
     },
   }),
 );
-app.use(cors({ origin: true, credentials: true }));
+
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+  }),
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(
   session({
-    secret: process.env.SESSION_SECRET,
+    secret: process.env.SESSION_SECRET ?? "fallback-dev-secret",
     resave: false,
     saveUninitialized: false,
     cookie: {
-      httpOnly: true,
       secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000,
+      sameSite: "lax",
     },
   }),
 );
 
 app.use("/api", router);
-
-if (process.env.NODE_ENV === "production") {
-  const __dirname = path.dirname(fileURLToPath(import.meta.url));
-  const frontendDist = path.resolve(__dirname, "../../student-portal/dist/public");
-  app.use(express.static(frontendDist));
-  app.get("{*splat}", (_req, res) => {
-    res.sendFile(path.join(frontendDist, "index.html"));
-  });
-}
 
 export default app;
