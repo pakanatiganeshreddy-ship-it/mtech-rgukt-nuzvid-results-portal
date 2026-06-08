@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { GraduationCap, ShieldCheck } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import campusBg from "@assets/RGUKTN_1780635783963.jpg";
+
 
 const loginSchema = z.object({
   studentId: z.string().min(1, "Student ID is required"),
@@ -56,8 +56,7 @@ export default function StudentLogin() {
     <div
       className="min-h-screen flex flex-col items-center justify-center px-4 py-8 relative"
       style={{
-        backgroundImage: `url(${campusBg})`,
-        backgroundSize: "cover",
+  background: "linear-gradient(135deg, #1e3a5f 0%, #2d6a4f 100%)",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
       }}
