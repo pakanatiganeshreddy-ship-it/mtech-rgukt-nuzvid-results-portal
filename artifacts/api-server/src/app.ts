@@ -61,7 +61,7 @@ app.use(
 app.use("/api", router);
 
 // Serve the built React frontend
-const frontendDist = path.resolve(process.cwd(), "artifacts/student-portal/dist");
+const frontendDist = path.resolve(process.cwd(), "artifacts/student-portal/dist/public");
 app.use(express.static(frontendDist));
 
 // SPA fallback — send index.html for all non-API routes
