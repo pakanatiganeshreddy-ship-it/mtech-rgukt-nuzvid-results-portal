@@ -103,12 +103,18 @@ function parseRGUKTLine(line: string): ExtractedRecord | null {
   if (!idMatch) return null;
 
   // Semester-N
-  const semMatch = trimmed.match(/\bSemester-(\d+)\b/i);
+    // Semester-N or Semester-II (Roman numerals)
+  const semMatch = trimmed.match(/\bSemester-([IVX]+|\d+)\b/i);
   if (!semMatch) return null;
-  const semester = parseInt(semMatch[1], 10);
+  const romanMap: Record<string, number> = {
+    I: 1, II: 2, III: 3, IV: 4, V: 5, VI: 6, VII: 7, VIII: 8, IX: 9, X: 10,
+  };
+  const semStr = semMatch[1].toUpperCase();
+  const semester = /^\d+$/.test(semStr) ? parseInt(semStr, 10) : (romanMap[semStr] ?? 0);
+  if (semester === 0) return null;
 
-  // Branch: 2-4 uppercase letters immediately after "Semester-N "
-  const branchMatch = trimmed.match(/\bSemester-\d+\s+([A-Z]{2,4})\b/);
+  // Branch: 2-4 uppercase letters immediately after "Semester-N " or "Semester-II "
+  const branchMatch = trimmed.match(/\bSemester-(?:\d+|[IVX]+)\s+([A-Z]{2,4})\b/i);
   const branch = branchMatch ? branchMatch[1] : "UNKNOWN";
 
   // Subject Code: after branch — digits+uppercase+digits (e.g. 24CSP1103, 21TE2192)
@@ -156,9 +162,20 @@ function parseRGUKTLine(line: string): ExtractedRecord | null {
 
 function extractRecordsFromText(text: string): ExtractedRecord[] {
   const records: ExtractedRecord[] = [];
-  const lines = text.split("\n");
 
-  for (const line of lines) {
+  // Join continuation lines (lines that don't start with a row number)
+  const rawLines = text.split("\n");
+  const joinedLines: string[] = [];
+  for (const line of rawLines) {
+    const t = line.replace(/\t/g, " ").trim();
+    if (/^\d+\s/.test(t)) {
+      joinedLines.push(t);
+    } else if (joinedLines.length > 0 && t.length > 0) {
+      joinedLines[joinedLines.length - 1] += " " + t;
+    }
+  }
+
+  for (const line of joinedLines) {
     const record = parseRGUKTLine(line);
     if (record) {
       records.push(record);
