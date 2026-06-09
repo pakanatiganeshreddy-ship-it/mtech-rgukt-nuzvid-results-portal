@@ -10,7 +10,7 @@ const { PDFParse } = _require("pdf-parse") as {
   PDFParse: new (opts: { data: Buffer }) => { getText: () => Promise<{ text: string }> };
 };
 
-import { db, studentsTable, resultsTable, pdfUploadsTable } from "@workspace/db";
+import { db, studentsTable, resultsTable, pdfUploadsTable } from "@workspace/db":
 import { eq, sql } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/requireAuth";
 import { logger } from "../lib/logger";
@@ -91,71 +91,102 @@ interface ExtractedRecord {
  *   1 NM2304TE02 Semester-4 CE 21TE2192 Transportation Engineering Dissertation Part -II 16 Ex November, 2025 2023
  *   1 NM2403CP01 Semester-1 ECE 24CSP1103 Communications and Signal processing Digital Communications \t3 \tA March, 2025 2025
  */
-function parseRGUKTLine(line: string): ExtractedRecord | null {
-  // Replace tabs with spaces for uniform matching
-  const trimmed = line.replace(/\t/g, " ").trim();
+const ROMAN_NUMERALS: Record<string, number> = {
+  I: 1, II: 2, III: 3, IV: 4, V: 5, VI: 6,
+  VII: 7, VIII: 8, IX: 9, X: 10,
+};
+const MONTH_PATTERN =
+  "January|February|March|April|May|June|July|August|September|October|November|December";
+const GRADE_TOKENS =
+  "\\b(?:Ex|AB|[A-EP]|Fail(?:\\s*\\(R\\))?)\\b";
 
-  // Must start with a row number
-  if (!/^\d+\s/.test(trimmed)) return null;
+function parseRGUKTLine(rawLine: string): ExtractedRecord | null {
+  const l = rawLine.replace(/[\t ]+/g, " ").trim();
+  if (!l || !/^\d+\s/.test(l)) return null;
+  if (!/\bNM\d{4}[A-Z]{2}\d{2}\b/.test(l)) return null;
 
-  // Student ID: NM + 4 digits + 2 uppercase + 2+ digits
-  const idMatch = trimmed.match(/\b(NM\d{4}[A-Z]{2}\d{2,})\b/);
-  if (!idMatch) return null;
+  const sidM = l.match(/\b(NM\d{4}[A-Z]{2}\d{2})\b/);
+  if (!sidM) return null;
 
-  // Semester-N
-    // Semester-N or Semester-II (Roman numerals)
-  const semMatch = trimmed.match(/\bSemester-([IVX]+|\d+)\b/i);
-  if (!semMatch) return null;
-  const romanMap: Record<string, number> = {
-    I: 1, II: 2, III: 3, IV: 4, V: 5, VI: 6, VII: 7, VIII: 8, IX: 9, X: 10,
-  };
-  const semStr = semMatch[1].toUpperCase();
-  const semester = /^\d+$/.test(semStr) ? parseInt(semStr, 10) : (romanMap[semStr] ?? 0);
-  if (semester === 0) return null;
+  const semM = l.match(/\bSemester-([IVX]+|\d+)\b/i);
+  if (!semM) return null;
+  const semStr = semM[1].toUpperCase();
+  const semester = /^\d+$/.test(semStr)
+    ? parseInt(semStr, 10)
+    : (ROMAN_NUMERALS[semStr] ?? 0);
+  if (!semester) return null;
 
-  // Branch: 2-4 uppercase letters immediately after "Semester-N " or "Semester-II "
-  const branchMatch = trimmed.match(/\bSemester-(?:\d+|[IVX]+)\s+([A-Z]{2,4})\b/i);
-  const branch = branchMatch ? branchMatch[1] : "UNKNOWN";
+  const brM = l.match(/\bSemester-(?:\d+|[IVX]+)\s+([A-Z]{2,4})\b/i);
+  if (!brM) return null;
 
-  // Subject Code: after branch — digits+uppercase+digits (e.g. 24CSP1103, 21TE2192)
-  const branchEnd = trimmed.indexOf(branch) + branch.length;
-  const afterBranch = trimmed.slice(branchEnd).trimStart();
-  const subjectCodeMatch = afterBranch.match(/^(\d{2}[A-Z]{2,6}\d{3,6}[A-Z]?)\b/);
-  if (!subjectCodeMatch) return null;
-  const subjectCode = subjectCodeMatch[1].toUpperCase();
+  const scM = l.match(/\b(\d{2}[A-Z]{2,6}\d{3,6}[A-Z]?)\b/);
+  if (!scM) return null;
 
-  // End-of-line pattern anchored on month name:
-  //   <credits>  <grade>  <Month>, <year>  <batch>
-  const MONTHS =
-    "January|February|March|April|May|June|July|August|September|October|November|December";
-  const endPattern = new RegExp(
-    `(\\d+(?:\\.\\d+)?)\\s+(EX|Ex|A|B|C|D|E|P|Fail(?:\\s*\\(?R\\)?)?)\\s+(?:${MONTHS}),?\\s*\\d{4}\\s+(\\d{4})\\s*$`,
-    "i"
+  // Find month anywhere in line (handles month mid-line after joining)
+  const monthRx = new RegExp("(" + MONTH_PATTERN + "),?\\s*(\\d{4})", "i");
+  const monthM = l.match(monthRx);
+  if (!monthM) return null;
+
+  // Batch: last 4-digit year at end of line
+  const batchM = l.match(/\b(\d{4})\s*$/);
+  if (!batchM) return null;
+  const batch = batchM[1];
+
+  // Middle section: between subject code end and start of month
+  const scEnd = l.indexOf(scM[1]) + scM[1].length;
+  const monthStart = l.search(
+    new RegExp("(" + MONTH_PATTERN + "),?\\s*\\d{4}", "i"),
   );
-  const endMatch = trimmed.match(endPattern);
-  if (!endMatch) return null;
+  if (monthStart <= scEnd) return null;
+  const mid = l.substring(scEnd, monthStart).trim();
 
-  const credits = parseFloat(endMatch[1]);
-  const grade = normalizeGrade(endMatch[2]);
-  const batch = endMatch[3];
+  // All numbers in mid (handles embedded like Processing1.5Laboratory)
+  const allNums = [...mid.matchAll(/(?<!\d)(\d+(?:\.\d+)?)(?!\d)/g)];
+  if (!allNums.length) return null;
 
-  // Subject name: everything between SubjectCode and Credits
-  const subjectCodeIdx = trimmed.indexOf(subjectCode) + subjectCode.length;
-  const endMatchIdx = trimmed.lastIndexOf(endMatch[0]);
-  const middleText = trimmed.slice(subjectCodeIdx, endMatchIdx).trim();
+  const lastNum = allNums[allNums.length - 1];
+  const afterLastNum = mid
+    .substring(lastNum.index! + lastNum[0].length)
+    .trim();
 
-  // middleText = "Specialization SubjectName" merged (pdf-parse v2 collapses spaces).
-  // Store the combined text as subject name — subject code is the unique identifier.
-  const subjectName = middleText || "Unknown Subject";
+  const gradeRx = new RegExp(GRADE_TOKENS, "gi");
+
+  // Grade after last number (standard layout) OR before last number (wrapped layout)
+  const grAfterM = afterLastNum.match(new RegExp(GRADE_TOKENS, "i"));
+
+  let grade: string;
+  let credits: number;
+
+  if (grAfterM) {
+    // Standard: "... Credits Grade Month"
+    credits = parseFloat(lastNum[1]);
+    grade = grAfterM[0];
+  } else {
+    // Wrapped: "... Grade SubjectName Credits Month"
+    credits = parseFloat(lastNum[1]);
+    const beforeLastNum = mid.substring(0, lastNum.index!).trim();
+    const allGrades = [...beforeLastNum.matchAll(gradeRx)];
+    if (!allGrades.length) return null;
+    grade = allGrades[allGrades.length - 1][0];
+  }
+
+  if (/^ex$/i.test(grade)) grade = "Ex";
+  else grade = grade.toUpperCase();
+
+  // Subject name: everything in mid minus grade tokens and leading/trailing whitespace
+  const subjectName = mid
+    .replace(new RegExp(GRADE_TOKENS, "gi"), "")
+    .replace(/\s+/g, " ")
+    .trim();
 
   return {
-    studentId: idMatch[1].toUpperCase(),
+    studentId: sidM[1],
     semester,
-    subjectCode,
+    branch: brM[1],
+    subjectCode: scM[1],
     subjectName,
     credits,
     grade,
-    branch: branch.toUpperCase(),
     batch,
   };
 }
@@ -163,19 +194,25 @@ function parseRGUKTLine(line: string): ExtractedRecord | null {
 function extractRecordsFromText(text: string): ExtractedRecord[] {
   const records: ExtractedRecord[] = [];
 
-  // Join continuation lines (lines that don't start with a row number)
+  // Join continuation lines: a line is a NEW record only if it has
+  // both a row-number format AND contains a student ID.
+  // This handles multi-line entries where subject name, grade, or credits
+  // wrap to the next line.
   const rawLines = text.split("\n");
-  const joinedLines: string[] = [];
-  for (const line of rawLines) {
-    const t = line.replace(/\t/g, " ").trim();
-    if (/^\d+\s/.test(t)) {
-      joinedLines.push(t);
-    } else if (joinedLines.length > 0 && t.length > 0) {
-      joinedLines[joinedLines.length - 1] += " " + t;
+  const joined: string[] = [];
+  const isNewRecord = (s: string): boolean =>
+    /^\d+\s/.test(s) && /\bNM\d{4}[A-Z]{2}\d{2}\b/.test(s);
+
+  for (const raw of rawLines) {
+    const stripped = raw.replace(/\t/g, " ").trimStart();
+    if (isNewRecord(stripped)) {
+      joined.push(stripped);
+    } else if (joined.length > 0 && stripped.trim().length > 0) {
+      joined[joined.length - 1] += " " + stripped.trim();
     }
   }
 
-  for (const line of joinedLines) {
+  for (const line of joined) {
     const record = parseRGUKTLine(line);
     if (record) {
       records.push(record);
@@ -186,7 +223,6 @@ function extractRecordsFromText(text: string): ExtractedRecord[] {
   logger.info({ total: records.length }, "Total records extracted from PDF");
   return records;
 }
-
 adminRouter.post("/upload-pdf", requireAdmin, upload.single("file"), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: "No PDF file uploaded" });
