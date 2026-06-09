@@ -101,6 +101,13 @@ const GRADE_TOKENS =
   "\\b(?:Ex|AB|[A-EP]|Fail(?:\\s*\\(R\\))?)\\b";
 
 function parseRGUKTLine(rawLine: string): ExtractedRecord | null {
+  const ROMAN: { [k: string]: number } = {
+    I: 1, II: 2, III: 3, IV: 4, V: 5, VI: 6, VII: 7, VIII: 8, IX: 9, X: 10,
+  };
+  const MONTHS =
+    "January|February|March|April|May|June|July|August|September|October|November|December";
+  const GRADE = "\\b(?:Ex|AB|[A-EP]|Fail(?:\\s*\\(R\\))?)\\b";
+
   const l = rawLine.replace(/[\t ]+/g, " ").trim();
   if (!l || !/^\d+\s/.test(l)) return null;
   if (!/\bNM\d{4}[A-Z]{2}\d{2}\b/.test(l)) return null;
@@ -113,7 +120,7 @@ function parseRGUKTLine(rawLine: string): ExtractedRecord | null {
   const semStr = semM[1].toUpperCase();
   const semester = /^\d+$/.test(semStr)
     ? parseInt(semStr, 10)
-    : (ROMAN_NUMERALS[semStr] ?? 0);
+    : ROMAN[semStr] ?? 0;
   if (!semester) return null;
 
   const brM = l.match(/\bSemester-(?:\d+|[IVX]+)\s+([A-Z]{2,4})\b/i);
@@ -122,47 +129,36 @@ function parseRGUKTLine(rawLine: string): ExtractedRecord | null {
   const scM = l.match(/\b(\d{2}[A-Z]{2,6}\d{3,6}[A-Z]?)\b/);
   if (!scM) return null;
 
-  // Find month anywhere in line (handles month mid-line after joining)
-  const monthRx = new RegExp("(" + MONTH_PATTERN + "),?\\s*(\\d{4})", "i");
-  const monthM = l.match(monthRx);
+  const monthM = l.match(new RegExp("(?:" + MONTHS + "),?\\s*\\d{4}", "i"));
   if (!monthM) return null;
 
-  // Batch: last 4-digit year at end of line
   const batchM = l.match(/\b(\d{4})\s*$/);
   if (!batchM) return null;
   const batch = batchM[1];
 
-  // Middle section: between subject code end and start of month
   const scEnd = l.indexOf(scM[1]) + scM[1].length;
   const monthStart = l.search(
-    new RegExp("(" + MONTH_PATTERN + "),?\\s*\\d{4}", "i"),
+    new RegExp("(?:" + MONTHS + "),?\\s*\\d{4}", "i"),
   );
   if (monthStart <= scEnd) return null;
   const mid = l.substring(scEnd, monthStart).trim();
 
-  // All numbers in mid (handles embedded like Processing1.5Laboratory)
   const allNums = [...mid.matchAll(/(?<!\d)(\d+(?:\.\d+)?)(?!\d)/g)];
   if (!allNums.length) return null;
 
   const lastNum = allNums[allNums.length - 1];
-  const afterLastNum = mid
-    .substring(lastNum.index! + lastNum[0].length)
-    .trim();
+  const afterLastNum = mid.substring(lastNum.index! + lastNum[0].length).trim();
+  const gradeRx = new RegExp(GRADE, "gi");
 
-  const gradeRx = new RegExp(GRADE_TOKENS, "gi");
-
-  // Grade after last number (standard layout) OR before last number (wrapped layout)
-  const grAfterM = afterLastNum.match(new RegExp(GRADE_TOKENS, "i"));
+  const grAfterM = afterLastNum.match(new RegExp(GRADE, "i"));
 
   let grade: string;
   let credits: number;
 
   if (grAfterM) {
-    // Standard: "... Credits Grade Month"
     credits = parseFloat(lastNum[1]);
     grade = grAfterM[0];
   } else {
-    // Wrapped: "... Grade SubjectName Credits Month"
     credits = parseFloat(lastNum[1]);
     const beforeLastNum = mid.substring(0, lastNum.index!).trim();
     const allGrades = [...beforeLastNum.matchAll(gradeRx)];
@@ -173,9 +169,8 @@ function parseRGUKTLine(rawLine: string): ExtractedRecord | null {
   if (/^ex$/i.test(grade)) grade = "Ex";
   else grade = grade.toUpperCase();
 
-  // Subject name: everything in mid minus grade tokens and leading/trailing whitespace
   const subjectName = mid
-    .replace(new RegExp(GRADE_TOKENS, "gi"), "")
+    .replace(new RegExp(GRADE, "gi"), "")
     .replace(/\s+/g, " ")
     .trim();
 
@@ -194,18 +189,14 @@ function parseRGUKTLine(rawLine: string): ExtractedRecord | null {
 function extractRecordsFromText(text: string): ExtractedRecord[] {
   const records: ExtractedRecord[] = [];
 
-  // Join continuation lines: a line is a NEW record only if it has
-  // both a row-number format AND contains a student ID.
-  // This handles multi-line entries where subject name, grade, or credits
-  // wrap to the next line.
   const rawLines = text.split("\n");
   const joined: string[] = [];
-  const isNewRecord = (s: string): boolean =>
-    /^\d+\s/.test(s) && /\bNM\d{4}[A-Z]{2}\d{2}\b/.test(s);
 
   for (const raw of rawLines) {
     const stripped = raw.replace(/\t/g, " ").trimStart();
-    if (isNewRecord(stripped)) {
+    const isNew =
+      /^\d+\s/.test(stripped) && /\bNM\d{4}[A-Z]{2}\d{2}\b/.test(stripped);
+    if (isNew) {
       joined.push(stripped);
     } else if (joined.length > 0 && stripped.trim().length > 0) {
       joined[joined.length - 1] += " " + stripped.trim();
