@@ -14,27 +14,11 @@ declare module "express-session" {
 }
 
 const ADMIN_USERNAME = "admin";
-const ADMIN_PASSWORD_DEFAULT = "admin123";
+const DEFAULT_ADMIN_PASSWORD = "admin123";
 
 export const authRouter = Router();
 
-async function getAdminPassword(): Promise<string> {
-  try {
-    const [row] = await db
-      .select()
-      .from(adminSettingsTable)
-      .where(eq(adminSettingsTable.key, "admin_password"));
-    if (row) return row.value;
-    await db.insert(adminSettingsTable).values({
-      key: "admin_password",
-      value: ADMIN_PASSWORD_DEFAULT,
-    });
-    return ADMIN_PASSWORD_DEFAULT;
-  } catch {
-    return ADMIN_PASSWORD_DEFAULT;
-  }
-}
-
+// ── Student login ──────────────────────────────────────────────
 authRouter.post("/student/login", async (req, res) => {
   const { studentId, password } = req.body;
   if (!studentId || !password) {
@@ -61,6 +45,7 @@ authRouter.post("/student/login", async (req, res) => {
   }
 });
 
+// ── Student change password ────────────────────────────────────
 authRouter.post("/student/change-password", requireStudent, async (req, res) => {
   const { currentPassword, newPassword } = req.body;
   if (!currentPassword || !newPassword) {
@@ -92,32 +77,48 @@ authRouter.post("/student/change-password", requireStudent, async (req, res) => 
   }
 });
 
+// ── Admin login ────────────────────────────────────────────────
 authRouter.post("/admin/login", async (req, res) => {
   const { username, password } = req.body;
   if (username !== ADMIN_USERNAME) {
     return res.status(401).json({ error: "Invalid admin credentials" });
   }
-  const adminPassword = await getAdminPassword();
-  if (password !== adminPassword) {
-    return res.status(401).json({ error: "Invalid admin credentials" });
+  try {
+    // Check if a custom password is stored in DB
+    const [stored] = await db
+      .select()
+      .from(adminSettingsTable)
+      .where(eq(adminSettingsTable.key, "admin_password"));
+    const expectedPassword = stored ? stored.value : DEFAULT_ADMIN_PASSWORD;
+    if (password !== expectedPassword) {
+      return res.status(401).json({ error: "Invalid admin credentials" });
+    }
+    req.session.role = "admin";
+    req.session.username = username;
+    req.session.name = "Administrator";
+    return res.json({ username, role: "admin" });
+  } catch (err) {
+    logger.error({ err }, "Admin login error");
+    return res.status(500).json({ error: "Internal server error" });
   }
-  req.session.role = "admin";
-  req.session.username = username;
-  req.session.name = "Administrator";
-  return res.json({ username, role: "admin" });
 });
 
+// ── Admin change password ──────────────────────────────────────
 authRouter.post("/admin/change-password", requireAdmin, async (req, res) => {
   const { currentPassword, newPassword } = req.body;
   if (!currentPassword || !newPassword) {
-    return res.status(400).json({ error: "Current and new password are required" });
+    return res.status(400).json({ error: "Current password and new password are required" });
   }
   if (newPassword.length < 6) {
     return res.status(400).json({ error: "New password must be at least 6 characters" });
   }
   try {
-    const adminPassword = await getAdminPassword();
-    if (currentPassword !== adminPassword) {
+    const [stored] = await db
+      .select()
+      .from(adminSettingsTable)
+      .where(eq(adminSettingsTable.key, "admin_password"));
+    const expectedPassword = stored ? stored.value : DEFAULT_ADMIN_PASSWORD;
+    if (currentPassword !== expectedPassword) {
       return res.status(401).json({ error: "Current password is incorrect" });
     }
     await db
@@ -134,11 +135,13 @@ authRouter.post("/admin/change-password", requireAdmin, async (req, res) => {
   }
 });
 
+// ── Logout ─────────────────────────────────────────────────────
 authRouter.post("/logout", (req, res) => {
   req.session = null;
   res.json({ success: true });
 });
 
+// ── Who am I ───────────────────────────────────────────────────
 authRouter.get("/me", (req, res) => {
   if (!req.session.role) {
     return res.status(401).json({ error: "Not authenticated" });
