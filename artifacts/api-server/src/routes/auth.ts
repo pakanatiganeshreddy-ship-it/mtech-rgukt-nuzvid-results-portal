@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, studentsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { logger } from "../lib/logger";
+import { requireStudent } from "../middlewares/requireAuth";
 
 declare module "express-session" {
   interface SessionData {
@@ -27,7 +28,6 @@ authRouter.post("/student/login", async (req, res) => {
       .select()
       .from(studentsTable)
       .where(eq(studentsTable.studentId, studentId));
-
     if (!student) {
       return res.status(401).json({ error: "Invalid student ID or password" });
     }
@@ -40,6 +40,37 @@ authRouter.post("/student/login", async (req, res) => {
     return res.json({ studentId: student.studentId, name: student.name, role: "student" });
   } catch (err) {
     logger.error({ err }, "Student login error");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+authRouter.post("/student/change-password", requireStudent, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: "Current password and new password are required" });
+  }
+  if (newPassword.length < 6) {
+    return res.status(400).json({ error: "New password must be at least 6 characters" });
+  }
+  try {
+    const studentId = req.session.studentId!;
+    const [student] = await db
+      .select()
+      .from(studentsTable)
+      .where(eq(studentsTable.studentId, studentId));
+    if (!student) {
+      return res.status(404).json({ error: "Student not found" });
+    }
+    if (student.passwordHash !== currentPassword) {
+      return res.status(401).json({ error: "Current password is incorrect" });
+    }
+    await db
+      .update(studentsTable)
+      .set({ passwordHash: newPassword })
+      .where(eq(studentsTable.studentId, studentId));
+    return res.json({ success: true });
+  } catch (err) {
+    logger.error({ err }, "Change password error");
     return res.status(500).json({ error: "Internal server error" });
   }
 });
