@@ -10,7 +10,7 @@ const { PDFParse } = _require("pdf-parse") as {
   PDFParse: new (opts: { data: Buffer }) => { getText: () => Promise<{ text: string }> };
 };
 
-import { db, studentsTable, resultsTable, pdfUploadsTable } from "@workspace/db":
+import { db, studentsTable, resultsTable, pdfUploadsTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/requireAuth";
 import { logger } from "../lib/logger";
