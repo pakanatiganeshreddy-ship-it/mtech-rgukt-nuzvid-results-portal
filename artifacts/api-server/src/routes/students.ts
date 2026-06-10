@@ -19,9 +19,7 @@ studentsRouter.get("/", requireAdmin, async (req, res) => {
     if (search) {
       const s = search.toLowerCase();
       rows = rows.filter(
-        (r) =>
-          r.studentId.toLowerCase().includes(s) ||
-          r.name.toLowerCase().includes(s)
+        (r) => r.studentId.toLowerCase().includes(s) || r.name.toLowerCase().includes(s)
       );
     }
     if (branch) {
@@ -66,6 +64,24 @@ studentsRouter.post("/", requireAdmin, async (req, res) => {
     });
   } catch (err) {
     logger.error({ err }, "Create student error");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+studentsRouter.post("/:studentId/reset-password", requireAdmin, async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const [student] = await db
+      .update(studentsTable)
+      .set({ passwordHash: "123456" })
+      .where(eq(studentsTable.studentId, studentId))
+      .returning();
+    if (!student) {
+      return res.status(404).json({ error: "Student not found" });
+    }
+    return res.json({ success: true });
+  } catch (err) {
+    logger.error({ err }, "Reset student password error");
     return res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -119,10 +135,7 @@ studentsRouter.get("/:studentId/results", requireStudent, async (req, res) => {
 studentsRouter.get("/:studentId", requireStudent, async (req, res) => {
   try {
     const { studentId } = req.params;
-    if (
-      req.session.role === "student" &&
-      req.session.studentId !== studentId
-    ) {
+    if (req.session.role === "student" && req.session.studentId !== studentId) {
       return res.status(403).json({ error: "Forbidden" });
     }
     const [student] = await db
