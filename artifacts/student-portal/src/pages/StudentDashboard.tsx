@@ -1,10 +1,13 @@
+import { useState } from "react";
 import { useGetMe, useGetStudentResults, getGetStudentResultsQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Download, KeyRound, X } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
 
 interface SemesterResult {
   semester: number;
@@ -73,7 +76,6 @@ function buildPrintHTML(
     h1 { font-size: 18px; text-align: center; margin-bottom: 4px; }
     .subtitle { text-align: center; color: #555; margin-bottom: 20px; font-size: 13px; }
     .info-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; border: 1px solid #ddd; border-radius: 6px; padding: 12px; margin-bottom: 20px; }
-    .info-grid div { }
     .info-grid .label { font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: .5px; }
     .info-grid .value { font-size: 14px; font-weight: bold; margin-top: 2px; }
     .cgpa-box { text-align: center; background: #e8f0fe; border-radius: 6px; padding: 12px; }
@@ -120,6 +122,60 @@ export default function StudentDashboard() {
     }
   });
 
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+
+  const changePasswordMutation = useMutation({
+    mutationFn: async (data: { currentPassword: string; newPassword: string }) => {
+      const res = await fetch("/api/student/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to change password");
+      return json;
+    },
+    onSuccess: () => {
+      setPasswordSuccess(true);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setPasswordError(null);
+    },
+    onError: (err: Error) => {
+      setPasswordError(err.message);
+    },
+  });
+
+  const handlePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError(null);
+    if (newPassword.length < 6) {
+      setPasswordError("New password must be at least 6 characters");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError("New passwords do not match");
+      return;
+    }
+    changePasswordMutation.mutate({ currentPassword, newPassword });
+  };
+
+  const closeModal = () => {
+    setShowPasswordModal(false);
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setPasswordError(null);
+    setPasswordSuccess(false);
+  };
+
   const handleDownload = () => {
     if (!resultsSummary) return;
     const { student, semesters, cgpa } = resultsSummary;
@@ -155,6 +211,77 @@ export default function StudentDashboard() {
 
   return (
     <div className="space-y-8">
+
+      {/* Change Password Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6">
+            <div className="flex justify-between items-center mb-5">
+              <h2 className="text-lg font-semibold text-gray-900">Change Password</h2>
+              <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {passwordSuccess ? (
+              <div className="text-center py-4">
+                <div className="text-green-600 text-lg font-medium mb-2">Password changed successfully!</div>
+                <p className="text-gray-500 text-sm mb-4">Your new password is active from the next login.</p>
+                <Button onClick={closeModal} className="w-full">Close</Button>
+              </div>
+            ) : (
+              <form onSubmit={handlePasswordSubmit} className="space-y-4">
+                {passwordError && (
+                  <div className="bg-red-50 text-red-700 text-sm px-4 py-3 rounded-lg border border-red-200">
+                    {passwordError}
+                  </div>
+                )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+                  <Input
+                    type="password"
+                    placeholder="Enter current password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    required
+                    className="h-10"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                  <Input
+                    type="password"
+                    placeholder="At least 6 characters"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                    className="h-10"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+                  <Input
+                    type="password"
+                    placeholder="Repeat new password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    className="h-10"
+                  />
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <Button type="button" variant="outline" onClick={closeModal} className="flex-1" disabled={changePasswordMutation.isPending}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="flex-1" disabled={changePasswordMutation.isPending}>
+                    {changePasswordMutation.isPending ? "Saving..." : "Change Password"}
+                  </Button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
       <Card className="border-0 shadow-sm ring-1 ring-gray-200">
         <CardHeader className="bg-white border-b pb-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -167,16 +294,16 @@ export default function StudentDashboard() {
                 <div className="text-sm text-primary font-medium uppercase tracking-wider mb-1">Cumulative GPA</div>
                 <div className="text-3xl font-bold text-primary">{cgpa.toFixed(2)}</div>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDownload}
-                disabled={semesters.length === 0}
-                className="gap-2 shrink-0"
-              >
-                <Download className="h-4 w-4" />
-                Download Results
-              </Button>
+              <div className="flex flex-col gap-2">
+                <Button variant="outline" size="sm" onClick={handleDownload} disabled={semesters.length === 0} className="gap-2 shrink-0">
+                  <Download className="h-4 w-4" />
+                  Download Results
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setShowPasswordModal(true)} className="gap-2 shrink-0">
+                  <KeyRound className="h-4 w-4" />
+                  Change Password
+                </Button>
+              </div>
             </div>
           </div>
         </CardHeader>
