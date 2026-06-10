@@ -131,7 +131,7 @@ export default function StudentDashboard() {
 
   const changePasswordMutation = useMutation({
     mutationFn: async (data: { currentPassword: string; newPassword: string }) => {
-      const res = await fetch("/api/student/change-password", {
+      const res = await fetch("/api/auth/student/change-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
