@@ -8,10 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield } from "lucide-react";
+import { Shield, User } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -28,10 +27,7 @@ export default function AdminLogin() {
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
-    defaultValues: {
-      username: "",
-      password: "",
-    },
+    defaultValues: { username: "", password: "" },
   });
 
   useEffect(() => {
@@ -58,9 +54,7 @@ export default function AdminLogin() {
   return (
     <div
       className="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative"
-      style={{
-  background: "linear-gradient(135deg, #1e3a5f 0%, #2d6a4f 100%)",
-}}
+      style={{ background: "linear-gradient(135deg, #1e3a5f 0%, #2d6a4f 100%)" }}
     >
       <div className="absolute inset-0 bg-black/65" />
 
@@ -92,7 +86,6 @@ export default function AdminLogin() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
                 <FormField
@@ -133,6 +126,17 @@ export default function AdminLogin() {
             </Form>
           </CardContent>
         </Card>
+
+        {/* Student Login button — added below the card */}
+        <div className="mt-6 flex justify-center">
+          <button
+            onClick={() => setLocation("/")}
+            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm text-white/80 border border-white/30 rounded-lg hover:bg-white/10 hover:text-white transition-colors"
+          >
+            <User className="h-4 w-4" />
+            Student Login
+          </button>
+        </div>
       </div>
     </div>
   );
