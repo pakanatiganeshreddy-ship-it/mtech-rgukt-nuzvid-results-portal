@@ -22,7 +22,7 @@ export default function AdminDashboard() {
 
   const changePasswordMutation = useMutation({
     mutationFn: async (data: { currentPassword: string; newPassword: string }) => {
-      const res = await fetch("/api/admin/change-password", {
+     const res = await fetch("/api/auth/admin/change-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
