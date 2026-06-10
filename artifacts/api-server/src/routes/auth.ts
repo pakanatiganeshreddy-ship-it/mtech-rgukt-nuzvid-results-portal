@@ -1,8 +1,8 @@
 import { Router } from "express";
-import { db, studentsTable } from "@workspace/db";
+import { db, studentsTable, adminSettingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { logger } from "../lib/logger";
-import { requireStudent } from "../middlewares/requireAuth";
+import { requireStudent, requireAdmin } from "../middlewares/requireAuth";
 
 declare module "express-session" {
   interface SessionData {
@@ -14,9 +14,26 @@ declare module "express-session" {
 }
 
 const ADMIN_USERNAME = "admin";
-const ADMIN_PASSWORD = "admin123";
+const ADMIN_PASSWORD_DEFAULT = "admin123";
 
 export const authRouter = Router();
+
+async function getAdminPassword(): Promise<string> {
+  try {
+    const [row] = await db
+      .select()
+      .from(adminSettingsTable)
+      .where(eq(adminSettingsTable.key, "admin_password"));
+    if (row) return row.value;
+    await db.insert(adminSettingsTable).values({
+      key: "admin_password",
+      value: ADMIN_PASSWORD_DEFAULT,
+    });
+    return ADMIN_PASSWORD_DEFAULT;
+  } catch {
+    return ADMIN_PASSWORD_DEFAULT;
+  }
+}
 
 authRouter.post("/student/login", async (req, res) => {
   const { studentId, password } = req.body;
@@ -77,13 +94,44 @@ authRouter.post("/student/change-password", requireStudent, async (req, res) => 
 
 authRouter.post("/admin/login", async (req, res) => {
   const { username, password } = req.body;
-  if (username !== ADMIN_USERNAME || password !== ADMIN_PASSWORD) {
+  if (username !== ADMIN_USERNAME) {
+    return res.status(401).json({ error: "Invalid admin credentials" });
+  }
+  const adminPassword = await getAdminPassword();
+  if (password !== adminPassword) {
     return res.status(401).json({ error: "Invalid admin credentials" });
   }
   req.session.role = "admin";
   req.session.username = username;
   req.session.name = "Administrator";
   return res.json({ username, role: "admin" });
+});
+
+authRouter.post("/admin/change-password", requireAdmin, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: "Current and new password are required" });
+  }
+  if (newPassword.length < 6) {
+    return res.status(400).json({ error: "New password must be at least 6 characters" });
+  }
+  try {
+    const adminPassword = await getAdminPassword();
+    if (currentPassword !== adminPassword) {
+      return res.status(401).json({ error: "Current password is incorrect" });
+    }
+    await db
+      .insert(adminSettingsTable)
+      .values({ key: "admin_password", value: newPassword })
+      .onConflictDoUpdate({
+        target: adminSettingsTable.key,
+        set: { value: newPassword, updatedAt: new Date() },
+      });
+    return res.json({ success: true });
+  } catch (err) {
+    logger.error({ err }, "Admin change password error");
+    return res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 authRouter.post("/logout", (req, res) => {
