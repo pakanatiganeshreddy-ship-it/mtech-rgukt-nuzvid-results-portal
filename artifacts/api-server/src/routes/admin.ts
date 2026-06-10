@@ -132,7 +132,7 @@ function parseRGUKTLine(rawLine: string): ExtractedRecord | null {
   const monthM = l.match(new RegExp("(?:" + MONTHS + "),?\\s*\\d{4}", "i"));
   if (!monthM) return null;
 
-  const batchM = l.match(/\b(\d{4})\s*$/);
+  const batchM = l.match(/\b(\d{4})\b(?!.*\b\d{4}\b)/);
   if (!batchM) return null;
   const batch = batchM[1];
 
