@@ -6,6 +6,7 @@ import * as z from "zod";
 import { useStudentLogin, useGetMe } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { GraduationCap, ShieldCheck } from "lucide-react";
@@ -112,7 +113,7 @@ export default function StudentLogin() {
                     <FormItem>
                       <FormLabel className="text-gray-700 font-medium">Password</FormLabel>
                       <FormControl>
-                        <Input data-testid="input-password" type="password" placeholder="••••••••" {...field} className="h-11" />
+                        <PasswordInput data-testid="input-password" placeholder="••••••••" {...field} className="h-11" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
