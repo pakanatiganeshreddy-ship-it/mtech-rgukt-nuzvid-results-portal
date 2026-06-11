@@ -170,6 +170,7 @@ function parseRGUKTLine(rawLine: string): ExtractedRecord | null {
   else grade = grade.toUpperCase();
 
   const subjectName = mid
+    .substring(0, lastNum.index!)
     .replace(new RegExp(GRADE, "gi"), "")
     .replace(/\s+/g, " ")
     .trim();
