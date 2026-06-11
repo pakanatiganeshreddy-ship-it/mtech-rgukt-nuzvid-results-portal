@@ -7,7 +7,8 @@ import { Users, FileText, UploadCloud, KeyRound, X } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { useMutation } from "@tanstack/react-query";
-
+import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 export default function AdminDashboard() {
   const { data: stats, isLoading } = useGetAdminStats({
     query: { queryKey: getGetAdminStatsQueryKey() }
@@ -93,15 +94,15 @@ export default function AdminDashboard() {
                 )}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
-                  <Input type="password" placeholder="Enter current admin password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required className="h-10" />
+                  <PasswordInput placeholder="Enter current admin password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required className="h-10" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
-                  <Input type="password" placeholder="At least 6 characters" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required className="h-10" />
+                  <PasswordInput placeholder="At least 6 characters" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required className="h-10" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
-                  <Input type="password" placeholder="Repeat new password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required className="h-10" />
+                  <PasswordInput placeholder="Repeat new password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required className="h-10" />
                 </div>
                 <div className="flex gap-3 pt-2">
                   <Button type="button" variant="outline" onClick={closeModal} className="flex-1" disabled={changePasswordMutation.isPending}>Cancel</Button>
