@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Shield, User } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { PasswordInput } from "@/components/ui/password-input";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -108,7 +109,7 @@ export default function AdminLogin() {
                     <FormItem>
                       <FormLabel className="text-gray-700 font-medium">Password</FormLabel>
                       <FormControl>
-                        <Input data-testid="input-password" type="password" placeholder="••••••••" {...field} className="h-11" />
+                        <PasswordInput data-testid="input-password" placeholder="••••••••" {...field} className="h-11" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
