@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Download, KeyRound, X } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 
@@ -237,8 +238,7 @@ export default function StudentDashboard() {
                 )}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
-                  <Input
-                    type="password"
+                  <PasswordInput
                     placeholder="Enter current password"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
@@ -248,8 +248,7 @@ export default function StudentDashboard() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
-                  <Input
-                    type="password"
+                  <PasswordInput
                     placeholder="At least 6 characters"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
@@ -259,8 +258,7 @@ export default function StudentDashboard() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
-                  <Input
-                    type="password"
+                  <PasswordInput
                     placeholder="Repeat new password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
