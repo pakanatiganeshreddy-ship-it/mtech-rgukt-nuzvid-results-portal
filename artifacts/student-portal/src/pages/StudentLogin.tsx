@@ -13,7 +13,6 @@ import { GraduationCap, ShieldCheck } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-
 const loginSchema = z.object({
   studentId: z.string().min(1, "Student ID is required"),
   password: z.string().min(1, "Password is required"),
@@ -55,20 +54,16 @@ export default function StudentLogin() {
 
   return (
     <div
-      className="min-h-screen flex flex-col items-center justify-center px-4 py-8 relative"
-      style={{
-  background: "linear-gradient(135deg, #1e3a5f 0%, #2d6a4f 100%)",
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat",
-      }}
+      className="min-h-screen flex flex-col items-center justify-center px-4 py-8 relative bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: "url('/RGUKTN_1781280367364.jpg')" }}
     >
-      <div className="absolute inset-0 bg-black/60" />
+      <div className="absolute inset-0 bg-black/55" />
 
       <div className="relative z-10 w-full max-w-md flex flex-col items-center gap-6">
 
         <div className="flex flex-col items-center gap-3">
-          <div className="h-16 w-16 bg-primary rounded-full flex items-center justify-center shadow-lg ring-4 ring-white/20">
-            <GraduationCap className="h-8 w-8 text-primary-foreground" />
+          <div className="h-16 w-16 bg-blue-700 rounded-full flex items-center justify-center shadow-lg ring-4 ring-white/20">
+            <GraduationCap className="h-8 w-8 text-white" />
           </div>
           <h1 className="text-3xl font-extrabold text-white tracking-tight text-center drop-shadow-lg">
             RGUKT M.Tech Results
@@ -78,11 +73,12 @@ export default function StudentLogin() {
           </p>
         </div>
 
-        <Card className="w-full shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
-          <CardHeader className="border-b bg-gray-50/80 pb-5">
-            <CardTitle className="text-xl text-center text-gray-900">Student Sign In</CardTitle>
-            <CardDescription className="text-center text-gray-600">
-              Default password for all students: <span className="font-semibold text-gray-800">123456</span>
+        <Card className="w-full shadow-2xl border border-white/20 bg-white/10 backdrop-blur-md">
+          <CardHeader className="border-b border-white/15 pb-5">
+            <CardTitle className="text-xl text-center text-white">Student Sign In</CardTitle>
+            <CardDescription className="text-center text-blue-200">
+              Default password for all students:{" "}
+              <span className="font-semibold text-white">123456</span>
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-6 space-y-5">
@@ -98,9 +94,14 @@ export default function StudentLogin() {
                   name="studentId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-gray-700 font-medium">Student ID</FormLabel>
+                      <FormLabel className="text-blue-100 font-medium">Student ID</FormLabel>
                       <FormControl>
-                        <Input data-testid="input-student-id" placeholder="e.g. NM2403CP01" {...field} className="h-11" />
+                        <Input
+                          data-testid="input-student-id"
+                          placeholder="e.g. NM2403CP01"
+                          {...field}
+                          className="h-11 bg-white/90 text-gray-800 placeholder-gray-400 border-0 focus:ring-2 focus:ring-blue-400"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -111,9 +112,14 @@ export default function StudentLogin() {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-gray-700 font-medium">Password</FormLabel>
+                      <FormLabel className="text-blue-100 font-medium">Password</FormLabel>
                       <FormControl>
-                        <PasswordInput data-testid="input-password" placeholder="••••••••" {...field} className="h-11" />
+                        <PasswordInput
+                          data-testid="input-password"
+                          placeholder="••••••••"
+                          {...field}
+                          className="h-11 bg-white/90 text-gray-800 placeholder-gray-400 border-0 focus:ring-2 focus:ring-blue-400"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -122,7 +128,7 @@ export default function StudentLogin() {
                 <Button
                   data-testid="button-signin"
                   type="submit"
-                  className="w-full h-11 text-base font-medium"
+                  className="w-full h-11 text-base font-medium bg-blue-700 hover:bg-blue-800"
                   disabled={loginMutation.isPending}
                 >
                   {loginMutation.isPending ? "Signing in..." : "Sign in"}
@@ -135,7 +141,7 @@ export default function StudentLogin() {
         <Link href="/admin">
           <button
             data-testid="link-admin-login"
-            className="flex items-center gap-2 bg-white/15 hover:bg-white/25 text-white border border-white/30 rounded-lg px-5 py-3 text-sm font-semibold backdrop-blur-sm transition-all w-full justify-center"
+            className="flex items-center gap-2 bg-white/15 hover:bg-white/25 text-white border border-white/30 rounded-full px-5 py-3 text-sm font-semibold backdrop-blur-sm transition-all w-full justify-center"
           >
             <ShieldCheck className="h-4 w-4" />
             Admin Login
