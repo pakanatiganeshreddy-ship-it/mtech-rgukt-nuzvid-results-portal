@@ -32,12 +32,14 @@ export default function AdminStudents() {
   const [deleteTarget, setDeleteTarget] = useState<{ studentId: string; name: string } | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  const [showDeleteAll, setShowDeleteAll] = useState(false);
+  const [deleteAllLoading, setDeleteAllLoading] = useState(false);
+
   const [resetTarget, setResetTarget] = useState<{ studentId: string; name: string } | null>(null);
   const [resetLoading, setResetLoading] = useState(false);
   const [resetSuccess, setResetSuccess] = useState(false);
 
-  const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: getListStudentsQueryKey() });
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: getListStudentsQueryKey() });
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,6 +81,17 @@ export default function AdminStudents() {
     }
   };
 
+  const handleDeleteAll = async () => {
+    setDeleteAllLoading(true);
+    try {
+      await fetch("/api/students/", { method: "DELETE", credentials: "include" });
+      await invalidate();
+      setShowDeleteAll(false);
+    } finally {
+      setDeleteAllLoading(false);
+    }
+  };
+
   const handleResetPassword = async () => {
     if (!resetTarget) return;
     setResetLoading(true);
@@ -99,11 +112,45 @@ export default function AdminStudents() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold text-gray-900">Students Directory</h1>
-        <Button className="gap-2" onClick={() => { setAddOpen(true); setAddError(null); }}>
-          <Plus className="h-4 w-4" />
-          Add Student
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="destructive"
+            size="sm"
+            className="gap-2"
+            disabled={!students || students.length === 0}
+            onClick={() => setShowDeleteAll(true)}
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete All Students
+          </Button>
+          <Button className="gap-2" onClick={() => { setAddOpen(true); setAddError(null); }}>
+            <Plus className="h-4 w-4" />
+            Add Student
+          </Button>
+        </div>
       </div>
+
+      {/* Delete All Confirmation */}
+      <AlertDialog open={showDeleteAll} onOpenChange={setShowDeleteAll}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete All Students?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete <strong>all {students?.length ?? 0} students</strong> and all their result records. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteAllLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={handleDeleteAll}
+              disabled={deleteAllLoading}
+            >
+              {deleteAllLoading ? "Deleting..." : "Yes, Delete All"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Card>
         <CardHeader className="pb-3 border-b">
@@ -157,26 +204,17 @@ export default function AdminStudents() {
                       <TableCell>
                         <div className="flex gap-1">
                           <Button
-                            variant="ghost"
-                            size="sm"
+                            variant="ghost" size="sm"
                             className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 h-8 w-8 p-0"
                             title="Reset password to 123456"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setResetTarget({ studentId: student.studentId, name: student.name });
-                              setResetSuccess(false);
-                            }}
+                            onClick={(e) => { e.stopPropagation(); setResetTarget({ studentId: student.studentId, name: student.name }); setResetSuccess(false); }}
                           >
                             <RotateCcw className="h-4 w-4" />
                           </Button>
                           <Button
-                            variant="ghost"
-                            size="sm"
+                            variant="ghost" size="sm"
                             className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeleteTarget({ studentId: student.studentId, name: student.name });
-                            }}
+                            onClick={(e) => { e.stopPropagation(); setDeleteTarget({ studentId: student.studentId, name: student.name }); }}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -253,7 +291,7 @@ export default function AdminStudents() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Delete Confirm Dialog */}
+      {/* Delete Single Confirm Dialog */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
