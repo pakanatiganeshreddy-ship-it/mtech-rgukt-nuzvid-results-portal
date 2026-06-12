@@ -3,32 +3,120 @@ import { useListResults, getListResultsQueryKey } from "@workspace/api-client-re
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Trash2 } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function AdminResults() {
   const [studentId, setStudentId] = useState("");
   const [semesterStr, setSemesterStr] = useState("");
-  
+  const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+
   const debouncedStudentId = useDebounce(studentId, 300);
   const debouncedSemester = useDebounce(semesterStr, 300);
-
   const semester = debouncedSemester ? parseInt(debouncedSemester, 10) : undefined;
-  
   const params = {
     studentId: debouncedStudentId || undefined,
-    semester: isNaN(semester as number) ? undefined : semester
+    semester: isNaN(semester as number) ? undefined : semester,
   };
 
-  const { data: results, isLoading } = useListResults(
-    params,
-    { query: { queryKey: getListResultsQueryKey(params) } }
-  );
+  const queryClient = useQueryClient();
+  const { data: results, isLoading } = useListResults(params, {
+    query: { queryKey: getListResultsQueryKey(params) },
+  });
+
+  const deleteOneMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`/api/results/${id}`, { method: "DELETE", credentials: "include" });
+      if (!res.ok) throw new Error("Failed to delete result");
+    },
+    onSuccess: () => queryClient.invalidateQueries(),
+  });
+
+  const deleteAllMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/results/all", { method: "DELETE", credentials: "include" });
+      if (!res.ok) throw new Error("Failed to delete all results");
+    },
+    onSuccess: () => queryClient.invalidateQueries(),
+  });
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">All Results</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-900">All Results</h1>
+        <Button
+          variant="destructive"
+          size="sm"
+          className="gap-2"
+          disabled={deleteAllMutation.isPending || !results || results.length === 0}
+          onClick={() => setShowDeleteAllDialog(true)}
+        >
+          <Trash2 className="h-4 w-4" />
+          Delete All Results
+        </Button>
+      </div>
+
+      {/* Delete All Confirmation */}
+      <AlertDialog open={showDeleteAllDialog} onOpenChange={setShowDeleteAllDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete All Results?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete <strong>all {results?.length ?? 0} result records</strong> from the database. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => { setShowDeleteAllDialog(false); deleteAllMutation.mutate(); }}
+            >
+              Yes, Delete All
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Single Confirmation */}
+      <AlertDialog open={deleteTargetId !== null} onOpenChange={(open) => { if (!open) setDeleteTargetId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete This Result?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this result record. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => {
+                if (deleteTargetId !== null) {
+                  deleteOneMutation.mutate(deleteTargetId);
+                  setDeleteTargetId(null);
+                }
+              }}
+            >
+              Yes, Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Card>
         <CardHeader className="bg-gray-50 border-b pb-4">
@@ -78,6 +166,7 @@ export default function AdminResults() {
                     <TableHead className="text-center">Credits</TableHead>
                     <TableHead className="text-center">Grade</TableHead>
                     <TableHead className="text-center">Points</TableHead>
+                    <TableHead className="text-center">Delete</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -90,6 +179,16 @@ export default function AdminResults() {
                       <TableCell className="text-center">{result.credits}</TableCell>
                       <TableCell className="text-center font-semibold">{result.grade}</TableCell>
                       <TableCell className="text-center">{result.gradePoint}</TableCell>
+                      <TableCell className="text-center">
+                        <button
+                          onClick={() => setDeleteTargetId(result.id)}
+                          disabled={deleteOneMutation.isPending}
+                          className="text-red-400 hover:text-red-600 transition-colors p-1 rounded hover:bg-red-50"
+                          title="Delete this result"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
