@@ -18,23 +18,15 @@ studentsRouter.get("/", requireAdmin, async (req, res) => {
     let rows = await db.select().from(studentsTable).orderBy(studentsTable.studentId);
     if (search) {
       const s = search.toLowerCase();
-      rows = rows.filter(
-        (r) => r.studentId.toLowerCase().includes(s) || r.name.toLowerCase().includes(s)
-      );
+      rows = rows.filter((r) => r.studentId.toLowerCase().includes(s) || r.name.toLowerCase().includes(s));
     }
     if (branch) {
       rows = rows.filter((r) => r.branch.toLowerCase() === branch.toLowerCase());
     }
-    return res.json(
-      rows.map((r) => ({
-        id: r.id,
-        studentId: r.studentId,
-        name: r.name,
-        branch: r.branch,
-        batch: r.batch,
-        createdAt: r.createdAt.toISOString(),
-      }))
-    );
+    return res.json(rows.map((r) => ({
+      id: r.id, studentId: r.studentId, name: r.name,
+      branch: r.branch, batch: r.batch, createdAt: r.createdAt.toISOString(),
+    })));
   } catch (err) {
     logger.error({ err }, "List students error");
     return res.status(500).json({ error: "Internal server error" });
@@ -44,23 +36,12 @@ studentsRouter.get("/", requireAdmin, async (req, res) => {
 studentsRouter.post("/", requireAdmin, async (req, res) => {
   try {
     const { studentId, name, branch, batch, password } = req.body;
-    const [student] = await db
-      .insert(studentsTable)
-      .values({
-        studentId,
-        name,
-        branch,
-        batch: batch ?? "",
-        passwordHash: password ?? "123456",
-      })
-      .returning();
+    const [student] = await db.insert(studentsTable).values({
+      studentId, name, branch, batch: batch ?? "", passwordHash: password ?? "123456",
+    }).returning();
     return res.status(201).json({
-      id: student.id,
-      studentId: student.studentId,
-      name: student.name,
-      branch: student.branch,
-      batch: student.batch,
-      createdAt: student.createdAt.toISOString(),
+      id: student.id, studentId: student.studentId, name: student.name,
+      branch: student.branch, batch: student.batch, createdAt: student.createdAt.toISOString(),
     });
   } catch (err) {
     logger.error({ err }, "Create student error");
@@ -68,17 +49,24 @@ studentsRouter.post("/", requireAdmin, async (req, res) => {
   }
 });
 
+// ── Delete ALL students (and their results) ────────────────────────────────
+studentsRouter.delete("/", requireAdmin, async (_req, res) => {
+  try {
+    await db.delete(resultsTable);
+    await db.delete(studentsTable);
+    return res.json({ success: true });
+  } catch (err) {
+    logger.error({ err }, "Delete all students error");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 studentsRouter.post("/:studentId/reset-password", requireAdmin, async (req, res) => {
   try {
     const { studentId } = req.params;
-    const [student] = await db
-      .update(studentsTable)
-      .set({ passwordHash: "123456" })
-      .where(eq(studentsTable.studentId, studentId))
-      .returning();
-    if (!student) {
-      return res.status(404).json({ error: "Student not found" });
-    }
+    const [student] = await db.update(studentsTable).set({ passwordHash: "123456" })
+      .where(eq(studentsTable.studentId, studentId)).returning();
+    if (!student) return res.status(404).json({ error: "Student not found" });
     return res.json({ success: true });
   } catch (err) {
     logger.error({ err }, "Reset student password error");
@@ -95,8 +83,8 @@ studentsRouter.get("/:studentId/results", requireStudent, async (req, res) => {
     const [student] = await db.select().from(studentsTable).where(eq(studentsTable.studentId, studentId));
     if (!student) return res.status(404).json({ error: "Student not found" });
 
-    const rawResults = await db
-      .select().from(resultsTable).where(eq(resultsTable.studentId, studentId))
+    const rawResults = await db.select().from(resultsTable)
+      .where(eq(resultsTable.studentId, studentId))
       .orderBy(resultsTable.semester, resultsTable.subjectCode);
 
     const semMap = new Map<number, typeof rawResults>();
@@ -105,8 +93,7 @@ studentsRouter.get("/:studentId/results", requireStudent, async (req, res) => {
       semMap.get(r.semester)!.push(r);
     }
     const semesters = Array.from(semMap.entries()).sort(([a], [b]) => a - b).map(([semester, results]) => ({
-      semester,
-      sgpa: calcSGPA(results),
+      semester, sgpa: calcSGPA(results),
       totalCredits: results.reduce((s, r) => s + r.credits, 0),
       results: results.map((r) => ({
         id: r.id, studentId: r.studentId, semester: r.semester,
@@ -123,8 +110,7 @@ studentsRouter.get("/:studentId/results", requireStudent, async (req, res) => {
 
     return res.json({
       student: { id: student.id, studentId: student.studentId, name: student.name, branch: student.branch, batch: student.batch, createdAt: student.createdAt.toISOString() },
-      semesters,
-      cgpa,
+      semesters, cgpa,
     });
   } catch (err) {
     logger.error({ err }, "Get student results error");
@@ -138,20 +124,11 @@ studentsRouter.get("/:studentId", requireStudent, async (req, res) => {
     if (req.session.role === "student" && req.session.studentId !== studentId) {
       return res.status(403).json({ error: "Forbidden" });
     }
-    const [student] = await db
-      .select()
-      .from(studentsTable)
-      .where(eq(studentsTable.studentId, studentId));
-    if (!student) {
-      return res.status(404).json({ error: "Student not found" });
-    }
+    const [student] = await db.select().from(studentsTable).where(eq(studentsTable.studentId, studentId));
+    if (!student) return res.status(404).json({ error: "Student not found" });
     return res.json({
-      id: student.id,
-      studentId: student.studentId,
-      name: student.name,
-      branch: student.branch,
-      batch: student.batch,
-      createdAt: student.createdAt.toISOString(),
+      id: student.id, studentId: student.studentId, name: student.name,
+      branch: student.branch, batch: student.batch, createdAt: student.createdAt.toISOString(),
     });
   } catch (err) {
     logger.error({ err }, "Get student error");
@@ -180,21 +157,12 @@ studentsRouter.patch("/:studentId", requireAdmin, async (req, res) => {
     if (name !== undefined) updates.name = name;
     if (branch !== undefined) updates.branch = branch;
     if (batch !== undefined) updates.batch = batch;
-    const [student] = await db
-      .update(studentsTable)
-      .set(updates)
-      .where(eq(studentsTable.studentId, studentId))
-      .returning();
-    if (!student) {
-      return res.status(404).json({ error: "Student not found" });
-    }
+    const [student] = await db.update(studentsTable).set(updates)
+      .where(eq(studentsTable.studentId, studentId)).returning();
+    if (!student) return res.status(404).json({ error: "Student not found" });
     return res.json({
-      id: student.id,
-      studentId: student.studentId,
-      name: student.name,
-      branch: student.branch,
-      batch: student.batch,
-      createdAt: student.createdAt.toISOString(),
+      id: student.id, studentId: student.studentId, name: student.name,
+      branch: student.branch, batch: student.batch, createdAt: student.createdAt.toISOString(),
     });
   } catch (err) {
     logger.error({ err }, "Update student error");
