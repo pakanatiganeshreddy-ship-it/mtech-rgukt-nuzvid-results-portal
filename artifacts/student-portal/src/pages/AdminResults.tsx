@@ -49,7 +49,7 @@ export default function AdminResults() {
 
   const deleteAllMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch("/api/results/all", { method: "DELETE", credentials: "include" });
+      const res = await fetch("/api/results/", { method: "DELETE", credentials: "include" });
       if (!res.ok) throw new Error("Failed to delete all results");
     },
     onSuccess: () => queryClient.invalidateQueries(),
