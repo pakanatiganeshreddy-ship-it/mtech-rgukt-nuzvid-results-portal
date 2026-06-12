@@ -5,7 +5,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Download, KeyRound, X } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
@@ -27,44 +26,34 @@ interface SemesterResult {
 function buildPrintHTML(
   student: { studentId: string; name: string; branch: string; batch: string },
   semesters: SemesterResult[],
-  cgpa: number
+  cgpa: number,
+  specialization: string
 ): string {
-  const semRows = semesters
-    .map(
-      (sem) => `
-      <div class="semester">
-        <div class="sem-header">
-          <strong>Semester ${sem.semester}</strong>
-          <span>Credits: ${sem.totalCredits} &nbsp;|&nbsp; <strong>SGPA: ${sem.sgpa.toFixed(2)}</strong></span>
-        </div>
-        <table>
-          <thead>
+  const semRows = semesters.map((sem) => `
+    <div class="semester">
+      <div class="sem-header">
+        <strong>Semester ${sem.semester}</strong>
+        <span>Credits: ${sem.totalCredits} &nbsp;|&nbsp; <strong>SGPA: ${sem.sgpa.toFixed(2)}</strong></span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Subject Code</th><th>Subject Name</th>
+            <th class="center">Credits</th><th class="center">Grade</th><th class="center">Points</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${sem.results.map((r) => `
             <tr>
-              <th>Subject Code</th>
-              <th>Subject Name</th>
-              <th class="center">Credits</th>
-              <th class="center">Grade</th>
-              <th class="center">Points</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${sem.results
-              .map(
-                (r) => `
-              <tr>
-                <td>${r.subjectCode}</td>
-                <td>${r.subjectName}</td>
-                <td class="center">${r.credits}</td>
-                <td class="center"><strong>${r.grade}</strong></td>
-                <td class="center">${r.gradePoint}</td>
-              </tr>`
-              )
-              .join("")}
-          </tbody>
-        </table>
-      </div>`
-    )
-    .join("");
+              <td>${r.subjectCode}</td>
+              <td>${stripSpec(r.subjectName, specialization)}</td>
+              <td class="center">${r.credits}</td>
+              <td class="center"><strong>${r.grade}</strong></td>
+              <td class="center">${r.gradePoint}</td>
+            </tr>`).join("")}
+        </tbody>
+      </table>
+    </div>`).join("");
 
   return `<!DOCTYPE html>
 <html>
@@ -79,6 +68,9 @@ function buildPrintHTML(
     .info-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; border: 1px solid #ddd; border-radius: 6px; padding: 12px; margin-bottom: 20px; }
     .info-grid .label { font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: .5px; }
     .info-grid .value { font-size: 14px; font-weight: bold; margin-top: 2px; }
+    .spec-box { border: 1px solid #ddd; border-radius: 6px; padding: 8px 12px; margin-bottom: 16px; }
+    .spec-box .label { font-size: 10px; color: #666; text-transform: uppercase; }
+    .spec-box .value { font-size: 13px; font-weight: bold; margin-top: 2px; }
     .cgpa-box { text-align: center; background: #e8f0fe; border-radius: 6px; padding: 12px; }
     .cgpa-box .label { font-size: 10px; color: #1a56db; text-transform: uppercase; }
     .cgpa-box .value { font-size: 22px; font-weight: bold; color: #1a56db; }
@@ -101,6 +93,7 @@ function buildPrintHTML(
     <div><div class="label">Branch</div><div class="value">${student.branch}</div></div>
     <div><div class="label">Batch</div><div class="value">${student.batch}</div></div>
   </div>
+  ${specialization ? `<div class="spec-box"><div class="label">Specialization</div><div class="value">${specialization}</div></div>` : ""}
   <div class="cgpa-box" style="margin-bottom:20px;">
     <div class="label">Cumulative GPA (CGPA)</div>
     <div class="value">${cgpa.toFixed(2)}</div>
@@ -112,15 +105,31 @@ function buildPrintHTML(
 </html>`;
 }
 
+function computeSpecialization(subjectNames: string[]): string {
+  if (subjectNames.length < 2) return "";
+  const tokens = subjectNames.map(n => n.split(" "));
+  const minLen = Math.min(...tokens.map(t => t.length));
+  let prefixLen = 0;
+  for (let i = 0; i < minLen; i++) {
+    if (tokens.every(t => t[i] === tokens[0][i])) prefixLen = i + 1;
+    else break;
+  }
+  if (prefixLen < 2) return "";
+  return tokens[0].slice(0, prefixLen).join(" ");
+}
+
+function stripSpec(name: string, spec: string): string {
+  if (!spec) return name;
+  const prefix = spec + " ";
+  return name.startsWith(prefix) ? name.slice(prefix.length) : name;
+}
+
 export default function StudentDashboard() {
   const { data: user } = useGetMe();
   const studentId = user?.id;
 
   const { data: resultsSummary, isLoading, error } = useGetStudentResults(studentId || "", {
-    query: {
-      enabled: !!studentId,
-      queryKey: getGetStudentResultsQueryKey(studentId || ""),
-    }
+    query: { enabled: !!studentId, queryKey: getGetStudentResultsQueryKey(studentId || "") }
   });
 
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -144,49 +153,23 @@ export default function StudentDashboard() {
     },
     onSuccess: () => {
       setPasswordSuccess(true);
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-      setPasswordError(null);
+      setCurrentPassword(""); setNewPassword(""); setConfirmPassword(""); setPasswordError(null);
     },
-    onError: (err: Error) => {
-      setPasswordError(err.message);
-    },
+    onError: (err: Error) => { setPasswordError(err.message); },
   });
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordError(null);
-    if (newPassword.length < 6) {
-      setPasswordError("New password must be at least 6 characters");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setPasswordError("New passwords do not match");
-      return;
-    }
+    if (newPassword.length < 6) { setPasswordError("New password must be at least 6 characters"); return; }
+    if (newPassword !== confirmPassword) { setPasswordError("New passwords do not match"); return; }
     changePasswordMutation.mutate({ currentPassword, newPassword });
   };
 
   const closeModal = () => {
     setShowPasswordModal(false);
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
-    setPasswordError(null);
-    setPasswordSuccess(false);
-  };
-
-  const handleDownload = () => {
-    if (!resultsSummary) return;
-    const { student, semesters, cgpa } = resultsSummary;
-    const html = buildPrintHTML(student, semesters as SemesterResult[], cgpa);
-    const win = window.open("", "_blank");
-    if (!win) { alert("Please allow pop-ups to download results."); return; }
-    win.document.write(html);
-    win.document.close();
-    win.focus();
-    setTimeout(() => { win.print(); }, 300);
+    setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
+    setPasswordError(null); setPasswordSuccess(false);
   };
 
   if (isLoading) {
@@ -209,6 +192,18 @@ export default function StudentDashboard() {
   }
 
   const { student, semesters, cgpa } = resultsSummary;
+  const allSubjectNames = (semesters as SemesterResult[]).flatMap(s => s.results.map(r => r.subjectName));
+  const specialization = computeSpecialization(allSubjectNames);
+
+  const handleDownload = () => {
+    const html = buildPrintHTML(student, semesters as SemesterResult[], cgpa, specialization);
+    const win = window.open("", "_blank");
+    if (!win) { alert("Please allow pop-ups to download results."); return; }
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    setTimeout(() => { win.print(); }, 300);
+  };
 
   return (
     <div className="space-y-8">
@@ -219,9 +214,7 @@ export default function StudentDashboard() {
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6">
             <div className="flex justify-between items-center mb-5">
               <h2 className="text-lg font-semibold text-gray-900">Change Password</h2>
-              <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
-                <X className="h-5 w-5" />
-              </button>
+              <button onClick={closeModal} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
             </div>
             {passwordSuccess ? (
               <div className="text-center py-4">
@@ -232,44 +225,22 @@ export default function StudentDashboard() {
             ) : (
               <form onSubmit={handlePasswordSubmit} className="space-y-4">
                 {passwordError && (
-                  <div className="bg-red-50 text-red-700 text-sm px-4 py-3 rounded-lg border border-red-200">
-                    {passwordError}
-                  </div>
+                  <div className="bg-red-50 text-red-700 text-sm px-4 py-3 rounded-lg border border-red-200">{passwordError}</div>
                 )}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
-                  <PasswordInput
-                    placeholder="Enter current password"
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    required
-                    className="h-10"
-                  />
+                  <PasswordInput placeholder="Enter current password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required className="h-10" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
-                  <PasswordInput
-                    placeholder="At least 6 characters"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    required
-                    className="h-10"
-                  />
+                  <PasswordInput placeholder="At least 6 characters" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required className="h-10" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
-                  <PasswordInput
-                    placeholder="Repeat new password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                    className="h-10"
-                  />
+                  <PasswordInput placeholder="Repeat new password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required className="h-10" />
                 </div>
                 <div className="flex gap-3 pt-2">
-                  <Button type="button" variant="outline" onClick={closeModal} className="flex-1" disabled={changePasswordMutation.isPending}>
-                    Cancel
-                  </Button>
+                  <Button type="button" variant="outline" onClick={closeModal} className="flex-1" disabled={changePasswordMutation.isPending}>Cancel</Button>
                   <Button type="submit" className="flex-1" disabled={changePasswordMutation.isPending}>
                     {changePasswordMutation.isPending ? "Saving..." : "Change Password"}
                   </Button>
@@ -280,6 +251,7 @@ export default function StudentDashboard() {
         </div>
       )}
 
+      {/* Student Info Card */}
       <Card className="border-0 shadow-sm ring-1 ring-gray-200">
         <CardHeader className="bg-white border-b pb-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -318,28 +290,31 @@ export default function StudentDashboard() {
             <div className="text-sm text-gray-500 mb-1">Program</div>
             <div className="font-medium">M.Tech</div>
           </div>
+          {specialization && (
+            <div className="col-span-2 md:col-span-4">
+              <div className="text-sm text-gray-500 mb-1">Specialization</div>
+              <div className="font-medium">{specialization}</div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
+      {/* Semester Results */}
       {semesters.length === 0 ? (
         <Card>
-          <CardContent className="py-10 text-center text-gray-500">
-            No results found for this student.
-          </CardContent>
+          <CardContent className="py-10 text-center text-gray-500">No results found.</CardContent>
         </Card>
       ) : (
         <div className="space-y-8">
-          {(semesters as SemesterResult[]).map((semester) => (
-            <Card key={semester.semester} className="border-0 shadow-sm ring-1 ring-gray-200 overflow-hidden">
+          {(semesters as SemesterResult[]).map((sem) => (
+            <Card key={sem.semester} className="border-0 shadow-sm ring-1 ring-gray-200 overflow-hidden">
               <CardHeader className="bg-gray-50 border-b py-4">
                 <div className="flex justify-between items-center">
-                  <CardTitle className="text-lg">Semester {semester.semester}</CardTitle>
+                  <CardTitle className="text-lg">Semester {sem.semester}</CardTitle>
                   <div className="flex items-center gap-4">
-                    <div className="text-sm text-gray-600">
-                      Credits: <span className="font-medium text-gray-900">{semester.totalCredits}</span>
-                    </div>
+                    <span className="text-sm text-gray-600">Credits: <span className="font-medium text-gray-900">{sem.totalCredits}</span></span>
                     <Badge variant="outline" className="bg-white text-base px-3 py-1 border-primary/20 text-primary">
-                      SGPA: {semester.sgpa.toFixed(2)}
+                      SGPA: {sem.sgpa.toFixed(2)}
                     </Badge>
                   </div>
                 </div>
@@ -357,13 +332,13 @@ export default function StudentDashboard() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {semester.results.map((result) => (
+                      {sem.results.map((result) => (
                         <TableRow key={result.id}>
                           <TableCell className="font-medium text-gray-600">{result.subjectCode}</TableCell>
-                          <TableCell>{result.subjectName}</TableCell>
+                          <TableCell>{stripSpec(result.subjectName, specialization)}</TableCell>
                           <TableCell className="text-center">{result.credits}</TableCell>
                           <TableCell className="text-center">
-                            <span className={`font-semibold ${result.grade === 'FAIL' || result.grade === 'Fail' ? 'text-destructive' : 'text-gray-900'}`}>
+                            <span className={`font-semibold ${result.grade === 'Fail' ? 'text-destructive' : 'text-gray-900'}`}>
                               {result.grade}
                             </span>
                           </TableCell>
@@ -378,17 +353,6 @@ export default function StudentDashboard() {
           ))}
         </div>
       )}
-
-      <Card className="bg-blue-50/50 border-blue-100">
-        <CardContent className="py-4 flex flex-wrap gap-x-6 gap-y-2 text-sm justify-center text-gray-600">
-          <span className="font-medium text-gray-900">Grading Scale:</span>
-          <span>EX = 10</span><span>A = 9</span><span>B = 8</span>
-          <span>C = 7</span><span>D = 6</span><span>E = 5</span>
-          <span className="text-destructive">Fail = 0</span>
-          <span className="text-gray-400">|</span>
-          <span>CGPA × 10 = Aggregate %</span>
-        </CardContent>
-      </Card>
     </div>
   );
 }
