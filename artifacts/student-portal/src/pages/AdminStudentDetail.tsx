@@ -5,22 +5,35 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 
+function computeSpecialization(subjectNames: string[]): string {
+  if (subjectNames.length < 2) return "";
+  const tokens = subjectNames.map(n => n.split(" "));
+  const minLen = Math.min(...tokens.map(t => t.length));
+  let prefixLen = 0;
+  for (let i = 0; i < minLen; i++) {
+    if (tokens.every(t => t[i] === tokens[0][i])) prefixLen = i + 1;
+    else break;
+  }
+  if (prefixLen < 2) return "";
+  return tokens[0].slice(0, prefixLen).join(" ");
+}
+
+function stripSpec(name: string, spec: string): string {
+  if (!spec) return name;
+  const prefix = spec + " ";
+  return name.startsWith(prefix) ? name.slice(prefix.length) : name;
+}
+
 export default function AdminStudentDetail() {
   const [, params] = useRoute("/admin/students/:id");
   const studentId = params?.id || "";
 
   const { data: student, isLoading: isStudentLoading } = useGetStudent(studentId, {
-    query: {
-      enabled: !!studentId,
-      queryKey: getGetStudentQueryKey(studentId)
-    }
+    query: { enabled: !!studentId, queryKey: getGetStudentQueryKey(studentId) }
   });
 
   const { data: resultsSummary, isLoading: isResultsLoading } = useGetStudentResults(studentId, {
-    query: {
-      enabled: !!studentId,
-      queryKey: getGetStudentResultsQueryKey(studentId)
-    }
+    query: { enabled: !!studentId, queryKey: getGetStudentResultsQueryKey(studentId) }
   });
 
   if (isStudentLoading || isResultsLoading) {
@@ -33,14 +46,12 @@ export default function AdminStudentDetail() {
   }
 
   if (!student || !resultsSummary) {
-    return (
-      <div className="py-12 text-center text-gray-500">
-        Student not found or error loading data.
-      </div>
-    );
+    return <div className="py-12 text-center text-gray-500">Student not found or error loading data.</div>;
   }
 
   const { semesters, cgpa } = resultsSummary;
+  const allSubjectNames = semesters.flatMap(s => s.results.map(r => r.subjectName));
+  const specialization = computeSpecialization(allSubjectNames);
 
   return (
     <div className="space-y-6">
@@ -72,6 +83,12 @@ export default function AdminStudentDetail() {
             <div className="text-sm text-gray-500 mb-1">Program</div>
             <div className="font-medium">M.Tech</div>
           </div>
+          {specialization && (
+            <div className="col-span-2 md:col-span-4">
+              <div className="text-sm text-gray-500 mb-1">Specialization</div>
+              <div className="font-medium">{specialization}</div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -116,7 +133,7 @@ export default function AdminStudentDetail() {
                       {semester.results.map((result) => (
                         <TableRow key={result.id}>
                           <TableCell className="font-medium text-gray-600">{result.subjectCode}</TableCell>
-                          <TableCell>{result.subjectName}</TableCell>
+                          <TableCell>{stripSpec(result.subjectName, specialization)}</TableCell>
                           <TableCell className="text-center">{result.credits}</TableCell>
                           <TableCell className="text-center">
                             <span className={`font-semibold ${result.grade === 'Fail' ? 'text-destructive' : 'text-gray-900'}`}>
