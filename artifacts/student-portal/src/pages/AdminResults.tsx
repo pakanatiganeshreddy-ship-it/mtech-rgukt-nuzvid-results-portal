@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useListResults, getListResultsQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,25 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+function computeSpecialization(subjectNames: string[]): string {
+  if (subjectNames.length < 2) return "";
+  const tokens = subjectNames.map(n => n.split(" "));
+  const minLen = Math.min(...tokens.map(t => t.length));
+  let prefixLen = 0;
+  for (let i = 0; i < minLen; i++) {
+    if (tokens.every(t => t[i] === tokens[0][i])) prefixLen = i + 1;
+    else break;
+  }
+  if (prefixLen < 2) return "";
+  return tokens[0].slice(0, prefixLen).join(" ");
+}
+
+function stripSpec(name: string, spec: string): string {
+  if (!spec) return name;
+  const prefix = spec + " ";
+  return name.startsWith(prefix) ? name.slice(prefix.length) : name;
+}
+
 export default function AdminResults() {
   const [studentId, setStudentId] = useState("");
   const [semesterStr, setSemesterStr] = useState("");
@@ -38,6 +57,21 @@ export default function AdminResults() {
   const { data: results, isLoading } = useListResults(params, {
     query: { queryKey: getListResultsQueryKey(params) },
   });
+
+  // Compute specialization per student so multiple students work correctly
+  const studentSpecializations = useMemo(() => {
+    if (!results) return {} as Record<string, string>;
+    const byStudent: Record<string, string[]> = {};
+    results.forEach(r => {
+      if (!byStudent[r.studentId]) byStudent[r.studentId] = [];
+      byStudent[r.studentId].push(r.subjectName);
+    });
+    const specs: Record<string, string> = {};
+    Object.entries(byStudent).forEach(([sid, names]) => {
+      specs[sid] = computeSpecialization(names);
+    });
+    return specs;
+  }, [results]);
 
   const deleteOneMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -175,7 +209,7 @@ export default function AdminResults() {
                       <TableCell className="font-medium">{result.studentId}</TableCell>
                       <TableCell>Semester {result.semester}</TableCell>
                       <TableCell className="text-gray-600">{result.subjectCode}</TableCell>
-                      <TableCell>{result.subjectName}</TableCell>
+                      <TableCell>{stripSpec(result.subjectName, studentSpecializations[result.studentId] || "")}</TableCell>
                       <TableCell className="text-center">{result.credits}</TableCell>
                       <TableCell className="text-center font-semibold">{result.grade}</TableCell>
                       <TableCell className="text-center">{result.gradePoint}</TableCell>
