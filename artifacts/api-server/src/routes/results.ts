@@ -143,3 +143,30 @@ resultsRouter.get("/", requireAdmin, async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
+// Delete a single result by ID
+resultsRouter.delete("/:id", requireAdmin, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({ error: "Invalid ID" });
+  try {
+    const [deleted] = await db
+      .delete(resultsTable)
+      .where(eq(resultsTable.id, id))
+      .returning();
+    if (!deleted) return res.status(404).json({ error: "Result not found" });
+    return res.json({ success: true });
+  } catch (err) {
+    logger.error({ err }, "Delete result error");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Delete ALL results
+resultsRouter.delete("/", requireAdmin, async (req, res) => {
+  try {
+    await db.delete(resultsTable);
+    return res.json({ success: true });
+  } catch (err) {
+    logger.error({ err }, "Delete all results error");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
