@@ -65,7 +65,7 @@ export default function StudentLogin() {
           <div className="h-16 w-16 bg-blue-700 rounded-full flex items-center justify-center shadow-lg ring-4 ring-white/20">
             <GraduationCap className="h-8 w-8 text-white" />
           </div>
-          <h1 className="text-5xl font-black text-white tracking-tight text-center drop-shadow-lg leading-tight">
+          <h1 className="text-3xl font-extrabold text-white tracking-tight text-center drop-shadow-lg whitespace-nowrap">
   RGUKT M.Tech Results
 </h1>
         </div>
