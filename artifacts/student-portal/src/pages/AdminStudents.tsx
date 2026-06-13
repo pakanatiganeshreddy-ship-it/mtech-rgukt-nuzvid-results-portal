@@ -130,7 +130,6 @@ export default function AdminStudents() {
         </div>
       </div>
 
-      {/* Delete All Confirmation */}
       <AlertDialog open={showDeleteAll} onOpenChange={setShowDeleteAll}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -200,17 +199,26 @@ export default function AdminStudents() {
                       <TableCell>
                         <div className="flex gap-1">
                           <Button
-                            variant="ghost" size="sm"
+                            variant="ghost"
+                            size="sm"
                             className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 h-8 w-8 p-0"
                             title="Reset password to 123456"
-                            onClick={(e) => { e.stopPropagation(); setResetTarget({ studentId: student.studentId, name: student.name }); setResetSuccess(false); }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setResetTarget({ studentId: student.studentId, name: student.name });
+                              setResetSuccess(false);
+                            }}
                           >
                             <RotateCcw className="h-4 w-4" />
                           </Button>
                           <Button
-                            variant="ghost" size="sm"
+                            variant="ghost"
+                            size="sm"
                             className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
-                            onClick={(e) => { e.stopPropagation(); setDeleteTarget({ studentId: student.studentId, name: student.name }); }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteTarget({ studentId: student.studentId, name: student.name });
+                            }}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -225,33 +233,145 @@ export default function AdminStudents() {
         </CardContent>
       </Card>
 
-      {/* Add Student Dialog */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>Add New Student</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Add New Student</DialogTitle>
+          </DialogHeader>
           <form onSubmit={handleAdd} className="space-y-4 py-2">
             <div className="space-y-2">
               <Label htmlFor="sid">Student ID *</Label>
-              <Input id="sid" placeholder="e.g. NM2403CP01" value={addForm.studentId} onChange={(e) => setAddForm((f) => ({ ...f, studentId: e.target.value }))} required />
+              <Input
+                id="sid"
+                placeholder="e.g. NM2403CP01"
+                value={addForm.studentId}
+                onChange={(e) => setAddForm((f) => ({ ...f, studentId: e.target.value }))}
+                required
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="sname">Full Name *</Label>
-              <Input id="sname" placeholder="e.g. Ravi Kumar" value={addForm.name} onChange={(e) => setAddForm((f) => ({ ...f, name: e.target.value }))} required />
+              <Input
+                id="sname"
+                placeholder="e.g. Ravi Kumar"
+                value={addForm.name}
+                onChange={(e) => setAddForm((f) => ({ ...f, name: e.target.value }))}
+                required
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="sbranch">Branch *</Label>
-                <Input id="sbranch" placeholder="e.g. CP" value={addForm.branch} onChange={(e) => setAddForm((f) => ({ ...f, branch: e.target.value }))} required />
+                <Input
+                  id="sbranch"
+                  placeholder="e.g. CP"
+                  value={addForm.branch}
+                  onChange={(e) => setAddForm((f) => ({ ...f, branch: e.target.value }))}
+                  required
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="sbatch">Batch</Label>
-                <Input id="sbatch" placeholder="e.g. 2024-26" value={addForm.batch} onChange={(e) => setAddForm((f) => ({ ...f, batch: e.target.value }))} />
+                <Input
+                  id="sbatch"
+                  placeholder="e.g. 2024-26"
+                  value={addForm.batch}
+                  onChange={(e) => setAddForm((f) => ({ ...f, batch: e.target.value }))}
+                />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="spwd">Password <span className="text-gray-400 text-xs">(default: 123456)</span></Label>
-              <Input id="spwd" placeholder="Leave blank for 123456" value={addForm.password} onChange={(e) => setAddForm((f) => ({ ...f, password: e.target.value }))} />
+              <Label htmlFor="spwd">
+                Password <span className="text-gray-400 text-xs">(default: 123456)</span>
+              </Label>
+              <Input
+                id="spwd"
+                placeholder="Leave blank for 123456"
+                value={addForm.password}
+                onChange={(e) => setAddForm((f) => ({ ...f, password: e.target.value }))}
+              />
             </div>
             {addError && <p className="text-sm text-destructive">{addError}</p>}
             <DialogFooter className="pt-2">
-              <Button type="button" variant="ghost" onClick={() => setAddOpen(
+              <Button type="button" variant="ghost" onClick={() => setAddOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={addLoading}>
+                {addLoading ? "Adding..." : "Add Student"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={!!resetTarget}
+        onOpenChange={(o) => {
+          if (!o) {
+            setResetTarget(null);
+            setResetSuccess(false);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset Student Password</AlertDialogTitle>
+            <AlertDialogDescription>
+              {resetSuccess
+                ? `Password for ${resetTarget?.name} (${resetTarget?.studentId}) has been reset to 123456.`
+                : `This will reset the password for ${resetTarget?.name} (${resetTarget?.studentId}) back to the default: 123456.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            {resetSuccess ? (
+              <AlertDialogAction
+                onClick={() => {
+                  setResetTarget(null);
+                  setResetSuccess(false);
+                }}
+              >
+                Done
+              </AlertDialogAction>
+            ) : (
+              <>
+                <AlertDialogCancel disabled={resetLoading}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-amber-600 hover:bg-amber-700"
+                  onClick={handleResetPassword}
+                  disabled={resetLoading}
+                >
+                  {resetLoading ? "Resetting..." : "Reset to 123456"}
+                </AlertDialogAction>
+              </>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Student</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete{" "}
+              <strong>
+                {deleteTarget?.name} ({deleteTarget?.studentId})
+              </strong>{" "}
+              and all their result records. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90"
+              onClick={handleDelete}
+              disabled={deleteLoading}
+            >
+              {deleteLoading ? "Deleting..." : "Delete Student"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
