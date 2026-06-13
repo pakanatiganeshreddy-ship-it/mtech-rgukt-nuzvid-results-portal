@@ -4,7 +4,6 @@ import { eq } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { requireStudent, requireAdmin } from "../middlewares/requireAuth";
 import crypto from "node:crypto";
-import nodemailer from "nodemailer";
 
 declare module "express-session" {
   interface SessionData {
@@ -154,7 +153,7 @@ authRouter.post("/admin/forgot-password", async (req, res) => {
     if (!adminEmail) {
       return res.status(500).json({ error: "Admin email not configured on the server." });
     }
-    if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+    if (!process.env.RESEND_API_KEY) {
       return res.status(500).json({ error: "Email service not configured on the server." });
     }
 
@@ -181,33 +180,38 @@ authRouter.post("/admin/forgot-password", async (req, res) => {
     const siteUrl = process.env.SITE_URL || `${proto}://${host}`;
     const resetUrl = `${siteUrl}/admin/reset-password?token=${token}`;
 
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_APP_PASSWORD,
+    const emailRes = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+        "Content-Type": "application/json",
       },
+      body: JSON.stringify({
+        from: "RGUKT Portal <onboarding@resend.dev>",
+        to: [adminEmail],
+        subject: "RGUKT Portal — Admin Password Reset",
+        html: `
+          <div style="font-family:sans-serif;max-width:480px;margin:0 auto">
+            <h2 style="color:#1e3a8a">Admin Password Reset</h2>
+            <p>You requested a password reset for the <strong>RGUKT M.Tech Results Portal</strong> admin account.</p>
+            <p>Click the button below to reset your password. This link expires in <strong>30 minutes</strong>.</p>
+            <a href="${resetUrl}"
+               style="display:inline-block;background:#1e3a8a;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold;margin:16px 0">
+              Reset Password
+            </a>
+            <p style="color:#666;font-size:13px">Or copy this link into your browser:<br/>${resetUrl}</p>
+            <hr style="border:none;border-top:1px solid #eee;margin:24px 0"/>
+            <p style="color:#999;font-size:12px">If you did not request this, you can safely ignore this email.</p>
+          </div>
+        `,
+      }),
     });
 
-    await transporter.sendMail({
-      from: `"RGUKT Portal" <${process.env.GMAIL_USER}>`,
-      to: adminEmail,
-      subject: "RGUKT Portal — Admin Password Reset",
-      html: `
-        <div style="font-family:sans-serif;max-width:480px;margin:0 auto">
-          <h2 style="color:#1e3a8a">Admin Password Reset</h2>
-          <p>You requested a password reset for the <strong>RGUKT M.Tech Results Portal</strong> admin account.</p>
-          <p>Click the button below to reset your password. This link expires in <strong>30 minutes</strong>.</p>
-          <a href="${resetUrl}"
-             style="display:inline-block;background:#1e3a8a;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold;margin:16px 0">
-            Reset Password
-          </a>
-          <p style="color:#666;font-size:13px">Or copy this link into your browser:<br/>${resetUrl}</p>
-          <hr style="border:none;border-top:1px solid #eee;margin:24px 0"/>
-          <p style="color:#999;font-size:12px">If you did not request this, you can safely ignore this email.</p>
-        </div>
-      `,
-    });
+    if (!emailRes.ok) {
+      const emailErr = await emailRes.json();
+      logger.error({ emailErr }, "Resend API error");
+      throw new Error("Email delivery failed");
+    }
 
     return res.json({ success: true });
   } catch (err) {
