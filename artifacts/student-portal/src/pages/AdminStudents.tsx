@@ -157,7 +157,7 @@ export default function AdminStudents() {
           <div className="relative max-w-sm">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
             <Input
-              placeholder="Search by ID or Name..."
+              placeholder="Search by Student ID..."
               className="pl-9"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -181,7 +181,6 @@ export default function AdminStudents() {
                 <TableHeader className="bg-gray-50">
                   <TableRow>
                     <TableHead>Student ID</TableHead>
-                   
                     <TableHead>Branch</TableHead>
                     <TableHead>Batch</TableHead>
                     <TableHead className="w-[100px]">Actions</TableHead>
@@ -195,7 +194,7 @@ export default function AdminStudents() {
                         onClick={() => setLocation(`/admin/students/${student.studentId}`)}
                       >
                         {student.studentId}
-                      
+                      </TableCell>
                       <TableCell>{student.branch}</TableCell>
                       <TableCell>{student.batch}</TableCell>
                       <TableCell>
@@ -255,56 +254,4 @@ export default function AdminStudents() {
             </div>
             {addError && <p className="text-sm text-destructive">{addError}</p>}
             <DialogFooter className="pt-2">
-              <Button type="button" variant="ghost" onClick={() => setAddOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={addLoading}>{addLoading ? "Adding..." : "Add Student"}</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Reset Password Dialog */}
-      <AlertDialog open={!!resetTarget} onOpenChange={(o) => { if (!o) { setResetTarget(null); setResetSuccess(false); } }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Reset Student Password</AlertDialogTitle>
-            <AlertDialogDescription>
-              {resetSuccess
-                ? `Password for ${resetTarget?.name} (${resetTarget?.studentId}) has been reset to 123456.`
-                : `This will reset the password for ${resetTarget?.name} (${resetTarget?.studentId}) back to the default: 123456.`}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            {resetSuccess ? (
-              <AlertDialogAction onClick={() => { setResetTarget(null); setResetSuccess(false); }}>Done</AlertDialogAction>
-            ) : (
-              <>
-                <AlertDialogCancel disabled={resetLoading}>Cancel</AlertDialogCancel>
-                <AlertDialogAction className="bg-amber-600 hover:bg-amber-700" onClick={handleResetPassword} disabled={resetLoading}>
-                  {resetLoading ? "Resetting..." : "Reset to 123456"}
-                </AlertDialogAction>
-              </>
-            )}
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Delete Single Confirm Dialog */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Student</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete <strong>{deleteTarget?.name} ({deleteTarget?.studentId})</strong> and all their result records. This cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteLoading}>Cancel</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={handleDelete} disabled={deleteLoading}>
-              {deleteLoading ? "Deleting..." : "Delete Student"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
-  );
-}
+              <Button type="button" variant="ghost" onClick={() => setAddOpen(
