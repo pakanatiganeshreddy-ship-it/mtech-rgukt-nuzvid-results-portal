@@ -181,7 +181,7 @@ export default function AdminStudents() {
                 <TableHeader className="bg-gray-50">
                   <TableRow>
                     <TableHead>Student ID</TableHead>
-                   
+                   <TableHead>Name</TableHead>
                     <TableHead>Branch</TableHead>
                     <TableHead>Batch</TableHead>
                     <TableHead className="w-[100px]">Actions</TableHead>
