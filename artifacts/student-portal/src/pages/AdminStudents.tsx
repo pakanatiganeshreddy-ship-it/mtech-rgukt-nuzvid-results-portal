@@ -181,7 +181,7 @@ export default function AdminStudents() {
                 <TableHeader className="bg-gray-50">
                   <TableRow>
                     <TableHead>Student ID</TableHead>
-                   <TableHead>Name</TableHead>
+                   
                     <TableHead>Branch</TableHead>
                     <TableHead>Batch</TableHead>
                     <TableHead className="w-[100px]">Actions</TableHead>
@@ -195,10 +195,7 @@ export default function AdminStudents() {
                         onClick={() => setLocation(`/admin/students/${student.studentId}`)}
                       >
                         {student.studentId}
-                      </TableCell>
-                      <TableCell className="cursor-pointer" onClick={() => setLocation(`/admin/students/${student.studentId}`)}>
-                        {student.name}
-                      </TableCell>
+                      
                       <TableCell>{student.branch}</TableCell>
                       <TableCell>{student.batch}</TableCell>
                       <TableCell>
