@@ -65,12 +65,12 @@ export default function AdminLogin() {
             <Shield className="h-8 w-8 text-white" />
           </div>
         </div>
-       <h2 className="mt-6 text-center text-3xl font-extrabold text-white tracking-tight drop-shadow-lg">
-  Portal Administration
-</h2>
-<p className="mt-2 text-center text-sm text-blue-200 font-medium">
-  Rajiv Gandhi University of Knowledge Technologies-Nuzvid
-</p>
+        <h2 className="mt-6 text-center text-3xl font-extrabold text-white tracking-tight drop-shadow-lg">
+          Portal Administration
+        </h2>
+        <p className="mt-2 text-center text-sm text-blue-200 font-medium">
+          Rajiv Gandhi University of Knowledge Technologies-Nuzvid
+        </p>
       </div>
 
       <div className="relative z-10 mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4">
@@ -112,7 +112,16 @@ export default function AdminLogin() {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-blue-100 font-medium">Password</FormLabel>
+                      <div className="flex items-center justify-between">
+                        <FormLabel className="text-blue-100 font-medium">Password</FormLabel>
+                        <button
+                          type="button"
+                          onClick={() => setLocation("/admin/forgot-password")}
+                          className="text-xs text-blue-300 hover:text-white hover:underline font-medium"
+                        >
+                          Forgot password?
+                        </button>
+                      </div>
                       <FormControl>
                         <PasswordInput
                           data-testid="input-password"
