@@ -6,6 +6,8 @@ import NotFound from "@/pages/not-found";
 
 import StudentLogin from "@/pages/StudentLogin";
 import AdminLogin from "@/pages/AdminLogin";
+import ForgotPassword from "@/pages/ForgotPassword";
+import ResetPassword from "@/pages/ResetPassword";
 import StudentDashboard from "@/pages/StudentDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
 import AdminUpload from "@/pages/AdminUpload";
@@ -24,6 +26,8 @@ function Router() {
     <Switch>
       <Route path="/" component={StudentLogin} />
       <Route path="/admin" component={AdminLogin} />
+      <Route path="/admin/forgot-password" component={ForgotPassword} />
+      <Route path="/admin/reset-password" component={ResetPassword} />
       
       <Route path="/dashboard">
         <StudentLayout>
