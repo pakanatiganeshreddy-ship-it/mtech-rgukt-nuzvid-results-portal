@@ -65,9 +65,12 @@ export default function AdminLogin() {
             <Shield className="h-8 w-8 text-white" />
           </div>
         </div>
-       <h2 className="mt-6 text-center text-3xl font-extrabold text-white tracking-tight drop-shadow-lg whitespace-nowrap">
-  RGUKT M.Tech Results
+       <h2 className="mt-6 text-center text-3xl font-extrabold text-white tracking-tight drop-shadow-lg">
+  Portal Administration
 </h2>
+<p className="mt-2 text-center text-sm text-blue-200 font-medium">
+  Rajiv Gandhi University of Knowledge Technologies-Nuzvid
+</p>
       </div>
 
       <div className="relative z-10 mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4">
