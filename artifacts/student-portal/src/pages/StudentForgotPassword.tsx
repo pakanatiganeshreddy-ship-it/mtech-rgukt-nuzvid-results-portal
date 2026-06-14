@@ -49,6 +49,26 @@ export default function StudentForgotPassword() {
     setError(null);
     setLoading(true);
     try {
+      // Check if a reset is already pending in the DB
+      const statusRes = await fetch(`/api/auth/student/reset-status/${encodeURIComponent(studentId)}`);
+      const statusData = await statusRes.json();
+
+      if (statusRes.ok) {
+        if (statusData.status === "waiting") {
+          setReadyAt(statusData.readyAt);
+          setStep("waiting");
+          setLoading(false);
+          return;
+        }
+        if (statusData.status === "done") {
+          setNewPassword(statusData.newPassword);
+          setStep("done");
+          setLoading(false);
+          return;
+        }
+      }
+
+      // No existing reset — start a fresh one
       const res = await fetch("/api/auth/student/request-reset", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -138,10 +158,10 @@ export default function StudentForgotPassword() {
                   />
                 </div>
                 <p className="text-xs text-blue-200">
-                  Enter your Student ID to start a 1-hour timer. After it ends, your password resets to <strong className="text-white">123456</strong>.
+                  Enter your Student ID. If a reset is already in progress, your existing timer will resume automatically.
                 </p>
                 <Button type="submit" className="w-full h-11 bg-blue-700 hover:bg-blue-800" disabled={loading}>
-                  {loading ? "Submitting..." : "Start Reset Timer"}
+                  {loading ? "Checking..." : "Continue"}
                 </Button>
               </form>
             )}
@@ -165,7 +185,8 @@ export default function StudentForgotPassword() {
                   </div>
                 </div>
                 <p className="text-sm text-blue-200">
-                  Come back when the timer hits <strong className="text-white">00:00</strong> and click the button below.
+                  You can safely go back to login and return later — your timer keeps running on the server.
+                  Come back when it hits <strong className="text-white">00:00</strong> and click below.
                 </p>
                 <Button
                   className="w-full h-11 bg-blue-700 hover:bg-blue-800"
