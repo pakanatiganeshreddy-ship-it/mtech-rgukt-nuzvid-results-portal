@@ -6,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { GraduationCap, ArrowLeft, Clock, CheckCircle } from "lucide-react";
-import campusBg from "@assets/RGUKTN_1780635783963.jpg";
 
 function formatTime(ms: number) {
   if (ms <= 0) return "00:00";
@@ -93,34 +92,29 @@ export default function StudentForgotPassword() {
 
   return (
     <div
-      className="min-h-screen flex flex-col items-center justify-center px-4 py-8 relative"
-      style={{
-        backgroundImage: `url(${campusBg})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat",
-      }}
+      className="min-h-screen flex flex-col items-center justify-center px-4 py-8 relative bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: "url('/RGUKTN_1781280367364.jpg')" }}
     >
-      <div className="absolute inset-0 bg-black/60" />
+      <div className="absolute inset-0 bg-black/55" />
 
       <div className="relative z-10 w-full max-w-md flex flex-col items-center gap-6">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-16 w-16 bg-primary rounded-full flex items-center justify-center shadow-lg ring-4 ring-white/20">
-            <GraduationCap className="h-8 w-8 text-primary-foreground" />
+          <div className="h-16 w-16 bg-blue-700 rounded-full flex items-center justify-center shadow-lg ring-4 ring-white/20">
+            <GraduationCap className="h-8 w-8 text-white" />
           </div>
           <h1 className="text-3xl font-extrabold text-white tracking-tight text-center drop-shadow-lg">
             Forgot Password
           </h1>
           <p className="text-sm text-blue-200 font-medium text-center">
-            Rajiv Gandhi University of Knowledge Technologies
+            Rajiv Gandhi University of Knowledge Technologies-Nuzvid
           </p>
         </div>
 
-        <Card className="w-full shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
-          <CardHeader className="border-b bg-gray-50/80 pb-5">
-            <CardTitle className="text-xl text-center text-gray-900">Password Reset</CardTitle>
-            <CardDescription className="text-center text-gray-600">
-              Your password resets to <span className="font-semibold text-gray-800">123456</span> after 1 hour wait
+        <Card className="w-full shadow-2xl border border-white/20 bg-white/10 backdrop-blur-md">
+          <CardHeader className="border-b border-white/15 pb-5">
+            <CardTitle className="text-xl text-center text-white">Password Reset</CardTitle>
+            <CardDescription className="text-center text-blue-200">
+              Your password resets to <span className="font-semibold text-white">123456</span> after 1 hour wait
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
@@ -133,20 +127,20 @@ export default function StudentForgotPassword() {
                   </Alert>
                 )}
                 <div className="space-y-2">
-                  <Label htmlFor="sid">Your Student ID</Label>
+                  <Label htmlFor="sid" className="text-blue-100 font-medium">Your Student ID</Label>
                   <Input
                     id="sid"
                     placeholder="e.g. NM2403CP01"
                     value={studentId}
                     onChange={(e) => setStudentId(e.target.value)}
                     required
-                    className="h-11"
+                    className="h-11 bg-white/90 text-gray-800 placeholder-gray-400 border-0 focus:ring-2 focus:ring-blue-400"
                   />
                 </div>
-                <p className="text-xs text-gray-500">
-                  Enter your Student ID to start a 1-hour timer. After it ends, your password resets to <strong>123456</strong>.
+                <p className="text-xs text-blue-200">
+                  Enter your Student ID to start a 1-hour timer. After it ends, your password resets to <strong className="text-white">123456</strong>.
                 </p>
-                <Button type="submit" className="w-full h-11" disabled={loading}>
+                <Button type="submit" className="w-full h-11 bg-blue-700 hover:bg-blue-800" disabled={loading}>
                   {loading ? "Submitting..." : "Start Reset Timer"}
                 </Button>
               </form>
@@ -160,21 +154,21 @@ export default function StudentForgotPassword() {
                   </Alert>
                 )}
                 <div className="flex justify-center">
-                  <div className="h-16 w-16 bg-amber-50 rounded-full flex items-center justify-center border-2 border-amber-200">
-                    <Clock className="h-8 w-8 text-amber-500" />
+                  <div className="h-16 w-16 bg-amber-400/20 rounded-full flex items-center justify-center border-2 border-amber-400/50">
+                    <Clock className="h-8 w-8 text-amber-300" />
                   </div>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600 mb-2">Time remaining</p>
-                  <div className="text-5xl font-bold text-gray-900 tabular-nums tracking-widest">
+                  <p className="text-sm text-blue-200 mb-2">Time remaining</p>
+                  <div className="text-5xl font-bold text-white tabular-nums tracking-widest">
                     {formatTime(timeLeft)}
                   </div>
                 </div>
-                <p className="text-sm text-gray-500">
-                  Come back when the timer hits <strong>00:00</strong> and click the button below.
+                <p className="text-sm text-blue-200">
+                  Come back when the timer hits <strong className="text-white">00:00</strong> and click the button below.
                 </p>
                 <Button
-                  className="w-full h-11"
+                  className="w-full h-11 bg-blue-700 hover:bg-blue-800"
                   onClick={handleCheckStatus}
                   disabled={loading || timeLeft > 0}
                 >
@@ -191,12 +185,12 @@ export default function StudentForgotPassword() {
                   </Alert>
                 )}
                 <div className="flex justify-center">
-                  <div className="h-16 w-16 bg-green-50 rounded-full flex items-center justify-center border-2 border-green-200">
-                    <CheckCircle className="h-8 w-8 text-green-500" />
+                  <div className="h-16 w-16 bg-green-400/20 rounded-full flex items-center justify-center border-2 border-green-400/50">
+                    <CheckCircle className="h-8 w-8 text-green-400" />
                   </div>
                 </div>
-                <p className="text-sm text-gray-600">Your 1 hour is up! Click below to complete the reset.</p>
-                <Button className="w-full h-11" onClick={handleCheckStatus} disabled={loading}>
+                <p className="text-sm text-blue-200">Your 1 hour is up! Click below to complete the reset.</p>
+                <Button className="w-full h-11 bg-blue-700 hover:bg-blue-800" onClick={handleCheckStatus} disabled={loading}>
                   {loading ? "Resetting..." : "Reset My Password Now"}
                 </Button>
               </div>
@@ -205,17 +199,17 @@ export default function StudentForgotPassword() {
             {step === "done" && (
               <div className="text-center space-y-4 py-2">
                 <div className="flex justify-center">
-                  <div className="h-14 w-14 bg-green-100 rounded-full flex items-center justify-center">
-                    <CheckCircle className="h-7 w-7 text-green-600" />
+                  <div className="h-14 w-14 bg-green-400/20 rounded-full flex items-center justify-center border-2 border-green-400/50">
+                    <CheckCircle className="h-7 w-7 text-green-400" />
                   </div>
                 </div>
-                <p className="font-semibold text-gray-900">Password reset successfully!</p>
-                <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                  <p className="text-xs text-green-700 font-medium mb-1">Your new password is:</p>
-                  <p className="text-3xl font-bold text-green-800 tracking-widest">{newPassword}</p>
+                <p className="font-semibold text-white">Password reset successfully!</p>
+                <div className="p-4 bg-white/10 rounded-lg border border-white/20">
+                  <p className="text-xs text-blue-200 font-medium mb-1">Your new password is:</p>
+                  <p className="text-3xl font-bold text-white tracking-widest">{newPassword}</p>
                 </div>
-                <p className="text-xs text-gray-500">Please change this password after logging in.</p>
-                <Button className="w-full" onClick={() => setLocation("/")}>
+                <p className="text-xs text-blue-200">Please change this password after logging in.</p>
+                <Button className="w-full bg-blue-700 hover:bg-blue-800" onClick={() => setLocation("/")}>
                   Go to Login
                 </Button>
               </div>
@@ -225,7 +219,7 @@ export default function StudentForgotPassword() {
               <Button
                 type="button"
                 variant="ghost"
-                className="w-full mt-3 gap-2 text-gray-500 hover:text-gray-700"
+                className="w-full mt-3 gap-2 text-blue-200 hover:text-white hover:bg-white/10"
                 onClick={() => setLocation("/")}
               >
                 <ArrowLeft className="h-4 w-4" />
