@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 
 import StudentLogin from "@/pages/StudentLogin";
+import StudentForgotPassword from "@/pages/StudentForgotPassword";
 import AdminLogin from "@/pages/AdminLogin";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
@@ -25,6 +26,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={StudentLogin} />
+      <Route path="/forgot-password" component={StudentForgotPassword} />
       <Route path="/admin" component={AdminLogin} />
       <Route path="/admin/forgot-password" component={ForgotPassword} />
       <Route path="/admin/reset-password" component={ResetPassword} />
