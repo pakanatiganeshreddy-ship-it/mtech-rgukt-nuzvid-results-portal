@@ -98,17 +98,18 @@ export default function StudentLogin() {
         }
         .marquee-rtl {
           display: inline-block;
-          animation: marquee-rtl 10s linear infinite;
+          animation: marquee-rtl 12s linear infinite;
           white-space: nowrap;
         }
       `}</style>
 
       <div className="absolute inset-0 bg-black/55" />
 
-      {/* LEFT-SIDE RESULTS PANEL */}
+      {/* LEFT-SIDE RESULTS PANEL — wider (w-96 ≈ 10 cm) and shifted down */}
       {sortedUploads.length > 0 && (
-        <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-52 flex flex-col gap-2">
-          <div className="flex items-center gap-1.5 mb-0.5">
+        <div className="absolute left-4 top-[62%] -translate-y-1/2 z-10 w-96 flex flex-col gap-2">
+          {/* Header */}
+          <div className="flex items-center gap-2 mb-0.5">
             <Bell className="h-4 w-4 text-yellow-400 flex-shrink-0" />
             <p className="text-xs font-bold text-yellow-400 uppercase tracking-wider">
               Results Available
@@ -116,9 +117,9 @@ export default function StudentLogin() {
           </div>
 
           {/* Newest — scrolling ticker */}
-          <div className="rounded-lg border border-yellow-400/50 bg-black/55 backdrop-blur-md p-2.5 overflow-hidden">
-            <div className="flex items-center gap-1.5 mb-1.5">
-              <span className="text-[10px] font-bold bg-red-600 text-white px-1.5 py-0.5 rounded-full leading-none">
+          <div className="rounded-lg border border-yellow-400/50 bg-black/55 backdrop-blur-md px-3 py-2.5 overflow-hidden">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-[10px] font-bold bg-red-600 text-white px-2 py-0.5 rounded-full leading-none flex-shrink-0">
                 NEW
               </span>
               <span className="text-[10px] text-yellow-300 flex-shrink-0">
@@ -136,11 +137,11 @@ export default function StudentLogin() {
           {older.map((u) => (
             <div
               key={u.id}
-              className="rounded-lg border border-white/15 bg-black/45 backdrop-blur-md p-2.5"
+              className="rounded-lg border border-white/15 bg-black/45 backdrop-blur-md px-3 py-2.5"
             >
-              <div className="flex items-start gap-1.5">
+              <div className="flex items-start gap-2">
                 <FileText className="h-3.5 w-3.5 text-blue-400 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-gray-200 leading-snug line-clamp-2">
+                <p className="text-xs text-gray-200 leading-snug">
                   {formatUploadName(u.filename)}
                 </p>
               </div>
@@ -190,7 +191,7 @@ export default function StudentLogin() {
         </div>
       )}
 
-      {/* CENTER LOGIN CARD — banner removed from here */}
+      {/* CENTER LOGIN CARD */}
       <div className="relative z-10 w-full max-w-md flex flex-col items-center gap-5">
 
         <div className="flex flex-col items-center gap-3">
