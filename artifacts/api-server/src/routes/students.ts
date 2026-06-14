@@ -49,7 +49,6 @@ studentsRouter.post("/", requireAdmin, async (req, res) => {
   }
 });
 
-// ── Delete ALL students (and their results) ────────────────────────────────
 studentsRouter.delete("/", requireAdmin, async (_req, res) => {
   try {
     await db.delete(resultsTable);
@@ -70,6 +69,31 @@ studentsRouter.post("/:studentId/reset-password", requireAdmin, async (req, res)
     return res.json({ success: true });
   } catch (err) {
     logger.error({ err }, "Reset student password error");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── Student updates their own display name ─────────────────────────────────
+studentsRouter.patch("/:studentId/profile", requireStudent, async (req, res) => {
+  const { studentId } = req.params;
+  if (req.session.studentId !== studentId) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  const { name } = req.body;
+  if (!name || name.trim().length < 2) {
+    return res.status(400).json({ error: "Name must be at least 2 characters" });
+  }
+  try {
+    const [student] = await db
+      .update(studentsTable)
+      .set({ name: name.trim() })
+      .where(eq(studentsTable.studentId, studentId))
+      .returning();
+    if (!student) return res.status(404).json({ error: "Student not found" });
+    req.session.name = student.name;
+    return res.json({ name: student.name });
+  } catch (err) {
+    logger.error({ err }, "Update student profile error");
     return res.status(500).json({ error: "Internal server error" });
   }
 });
