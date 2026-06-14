@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { GraduationCap, ShieldCheck, Menu, X, User, Mail } from "lucide-react";
+import { GraduationCap, ShieldCheck, Menu, X, User, Mail, FileText, Bell } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -18,11 +18,31 @@ const loginSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
+interface UploadNotice {
+  id: number;
+  filename: string;
+  uploadedAt: string;
+}
+
+function formatUploadName(filename: string): string {
+  return filename.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
+}
+
+function timeAgo(isoDate: string): string {
+  const diff = Date.now() - new Date(isoDate).getTime();
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  if (days === 0) return "Today";
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days} days ago`;
+  return new Date(isoDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+}
+
 export default function StudentLogin() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [uploads, setUploads] = useState<UploadNotice[]>([]);
   const { data: user, isLoading } = useGetMe({ query: { retry: false } });
 
   const loginMutation = useStudentLogin();
@@ -37,6 +57,13 @@ export default function StudentLogin() {
       setLocation("/dashboard");
     }
   }, [user, isLoading, setLocation]);
+
+  useEffect(() => {
+    fetch("/api/admin/public-uploads")
+      .then((r) => r.json())
+      .then((data) => { if (Array.isArray(data)) setUploads(data); })
+      .catch(() => {});
+  }, []);
 
   const onSubmit = (values: z.infer<typeof loginSchema>) => {
     setError(null);
@@ -100,7 +127,7 @@ export default function StudentLogin() {
         </div>
       )}
 
-      <div className="relative z-10 w-full max-w-md flex flex-col items-center gap-6">
+      <div className="relative z-10 w-full max-w-md flex flex-col items-center gap-5">
 
         <div className="flex flex-col items-center gap-3">
           <div className="h-16 w-16 bg-blue-700 rounded-full flex items-center justify-center shadow-lg ring-4 ring-white/20">
@@ -113,6 +140,27 @@ export default function StudentLogin() {
             Rajiv Gandhi University of Knowledge Technologies-Nuzvid
           </p>
         </div>
+
+        {/* Results notice banner */}
+        {uploads.length > 0 && (
+          <div className="w-full rounded-xl border border-blue-400/30 bg-blue-900/40 backdrop-blur-md p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <Bell className="h-4 w-4 text-blue-300 flex-shrink-0" />
+              <p className="text-xs font-semibold text-blue-300 uppercase tracking-wider">Results Available</p>
+            </div>
+            <div className="space-y-1.5">
+              {uploads.map((u) => (
+                <div key={u.id} className="flex items-start gap-2">
+                  <FileText className="h-3.5 w-3.5 text-blue-400 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white font-medium truncate">{formatUploadName(u.filename)}</p>
+                  </div>
+                  <span className="text-xs text-blue-400 flex-shrink-0 whitespace-nowrap">{timeAgo(u.uploadedAt)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <Card className="w-full shadow-2xl border border-white/20 bg-white/10 backdrop-blur-md">
           <CardHeader className="border-b border-white/15 pb-5">
