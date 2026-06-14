@@ -16,6 +16,8 @@ declare module "express-session" {
 
 const ADMIN_USERNAME = "admin";
 const DEFAULT_ADMIN_PASSWORD = "admin123";
+const DEFAULT_STUDENT_PASSWORD = "123456";
+const RESET_WAIT_MS = 60 * 60 * 1000;
 
 export const authRouter = Router();
 
@@ -72,6 +74,74 @@ authRouter.post("/student/change-password", requireStudent, async (req, res) => 
     return res.json({ success: true });
   } catch (err) {
     logger.error({ err }, "Change password error");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+authRouter.post("/student/request-reset", async (req, res) => {
+  const { studentId } = req.body;
+  if (!studentId) {
+    return res.status(400).json({ error: "Student ID is required" });
+  }
+  try {
+    const [student] = await db
+      .select()
+      .from(studentsTable)
+      .where(eq(studentsTable.studentId, studentId));
+    if (!student) {
+      return res.status(404).json({ error: "Student ID not found" });
+    }
+    const now = new Date();
+    const resetKey = `student_reset_${studentId}`;
+    await db
+      .insert(adminSettingsTable)
+      .values({ key: resetKey, value: now.toISOString() })
+      .onConflictDoUpdate({
+        target: adminSettingsTable.key,
+        set: { value: now.toISOString(), updatedAt: now },
+      });
+    const readyAt = new Date(now.getTime() + RESET_WAIT_MS).toISOString();
+    return res.json({ success: true, readyAt });
+  } catch (err) {
+    logger.error({ err }, "Student request reset error");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+authRouter.get("/student/reset-status/:studentId", async (req, res) => {
+  const { studentId } = req.params;
+  try {
+    const [student] = await db
+      .select()
+      .from(studentsTable)
+      .where(eq(studentsTable.studentId, studentId));
+    if (!student) {
+      return res.status(404).json({ error: "Student ID not found" });
+    }
+    const resetKey = `student_reset_${studentId}`;
+    const [resetRow] = await db
+      .select()
+      .from(adminSettingsTable)
+      .where(eq(adminSettingsTable.key, resetKey));
+    if (!resetRow) {
+      return res.json({ status: "none" });
+    }
+    const requestedAt = new Date(resetRow.value).getTime();
+    const now = Date.now();
+    const readyAt = new Date(requestedAt + RESET_WAIT_MS).toISOString();
+    if (now - requestedAt >= RESET_WAIT_MS) {
+      await db
+        .update(studentsTable)
+        .set({ passwordHash: DEFAULT_STUDENT_PASSWORD })
+        .where(eq(studentsTable.studentId, studentId));
+      await db
+        .delete(adminSettingsTable)
+        .where(eq(adminSettingsTable.key, resetKey));
+      return res.json({ status: "done", newPassword: DEFAULT_STUDENT_PASSWORD });
+    }
+    return res.json({ status: "waiting", readyAt });
+  } catch (err) {
+    logger.error({ err }, "Student reset status error");
     return res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -156,10 +226,8 @@ authRouter.post("/admin/forgot-password", async (req, res) => {
     if (!process.env.RESEND_API_KEY) {
       return res.status(500).json({ error: "Email service not configured on the server." });
     }
-
     const token = crypto.randomBytes(32).toString("hex");
     const expiry = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-
     await db
       .insert(adminSettingsTable)
       .values({ key: "admin_reset_token", value: token })
@@ -174,12 +242,10 @@ authRouter.post("/admin/forgot-password", async (req, res) => {
         target: adminSettingsTable.key,
         set: { value: expiry, updatedAt: new Date() },
       });
-
     const proto = req.headers["x-forwarded-proto"] || req.protocol;
     const host = req.headers["x-forwarded-host"] || req.get("host");
     const siteUrl = process.env.SITE_URL || `${proto}://${host}`;
     const resetUrl = `${siteUrl}/admin/reset-password?token=${token}`;
-
     const emailRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -195,24 +261,21 @@ authRouter.post("/admin/forgot-password", async (req, res) => {
             <h2 style="color:#1e3a8a">Admin Password Reset</h2>
             <p>You requested a password reset for the <strong>RGUKT M.Tech Results Portal</strong> admin account.</p>
             <p>Click the button below to reset your password. This link expires in <strong>30 minutes</strong>.</p>
-            <a href="${resetUrl}"
-               style="display:inline-block;background:#1e3a8a;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold;margin:16px 0">
+            <a href="${resetUrl}" style="display:inline-block;background:#1e3a8a;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold;margin:16px 0">
               Reset Password
             </a>
-            <p style="color:#666;font-size:13px">Or copy this link into your browser:<br/>${resetUrl}</p>
+            <p style="color:#666;font-size:13px">Or copy this link:<br/>${resetUrl}</p>
             <hr style="border:none;border-top:1px solid #eee;margin:24px 0"/>
-            <p style="color:#999;font-size:12px">If you did not request this, you can safely ignore this email.</p>
+            <p style="color:#999;font-size:12px">If you did not request this, ignore this email.</p>
           </div>
         `,
       }),
     });
-
     if (!emailRes.ok) {
       const emailErr = await emailRes.json();
       logger.error({ emailErr }, "Resend API error");
       throw new Error("Email delivery failed");
     }
-
     return res.json({ success: true });
   } catch (err) {
     logger.error({ err }, "Forgot password error");
@@ -237,14 +300,12 @@ authRouter.post("/admin/reset-password", async (req, res) => {
       .select()
       .from(adminSettingsTable)
       .where(eq(adminSettingsTable.key, "admin_reset_token_expiry"));
-
     if (!tokenRow || tokenRow.value !== token) {
       return res.status(400).json({ error: "Invalid reset token. Please request a new one." });
     }
     if (!expiryRow || new Date(expiryRow.value) < new Date()) {
       return res.status(400).json({ error: "Reset token has expired. Please request a new one." });
     }
-
     await db
       .insert(adminSettingsTable)
       .values({ key: "admin_password", value: newPassword })
@@ -252,10 +313,8 @@ authRouter.post("/admin/reset-password", async (req, res) => {
         target: adminSettingsTable.key,
         set: { value: newPassword, updatedAt: new Date() },
       });
-
     await db.delete(adminSettingsTable).where(eq(adminSettingsTable.key, "admin_reset_token"));
     await db.delete(adminSettingsTable).where(eq(adminSettingsTable.key, "admin_reset_token_expiry"));
-
     return res.json({ success: true });
   } catch (err) {
     logger.error({ err }, "Reset password error");
