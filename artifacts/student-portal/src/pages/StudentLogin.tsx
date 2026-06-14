@@ -65,12 +65,12 @@ export default function StudentLogin() {
           <div className="h-16 w-16 bg-blue-700 rounded-full flex items-center justify-center shadow-lg ring-4 ring-white/20">
             <GraduationCap className="h-8 w-8 text-white" />
           </div>
-         <h1 className="text-3xl font-extrabold text-white tracking-tight text-center drop-shadow-lg">
-  RGUKT M.Tech Results
-</h1>
-<p className="text-sm text-blue-200 font-medium text-center">
-  Rajiv Gandhi University of Knowledge Technologies-Nuzvid
-</p>
+          <h1 className="text-3xl font-extrabold text-white tracking-tight text-center drop-shadow-lg">
+            RGUKT M.Tech Results
+          </h1>
+          <p className="text-sm text-blue-200 font-medium text-center">
+            Rajiv Gandhi University of Knowledge Technologies-Nuzvid
+          </p>
         </div>
 
         <Card className="w-full shadow-2xl border border-white/20 bg-white/10 backdrop-blur-md">
@@ -112,7 +112,16 @@ export default function StudentLogin() {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-blue-100 font-medium">Password</FormLabel>
+                      <div className="flex items-center justify-between">
+                        <FormLabel className="text-blue-100 font-medium">Password</FormLabel>
+                        <button
+                          type="button"
+                          onClick={() => setLocation("/forgot-password")}
+                          className="text-xs text-blue-300 hover:text-white hover:underline font-medium transition-colors"
+                        >
+                          Forgot password?
+                        </button>
+                      </div>
                       <FormControl>
                         <PasswordInput
                           data-testid="input-password"
