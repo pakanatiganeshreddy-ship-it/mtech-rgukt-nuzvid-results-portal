@@ -80,12 +80,75 @@ export default function StudentLogin() {
 
   if (isLoading) return null;
 
+  const sortedUploads = [...uploads].sort(
+    (a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
+  );
+  const newest = sortedUploads[0];
+  const older = sortedUploads.slice(1);
+
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center px-4 py-8 relative bg-cover bg-center bg-no-repeat"
       style={{ backgroundImage: "url('/RGUKTN_1781280367364.jpg')" }}
     >
+      <style>{`
+        @keyframes marquee-rtl {
+          0%   { transform: translateX(110%); }
+          100% { transform: translateX(-110%); }
+        }
+        .marquee-rtl {
+          display: inline-block;
+          animation: marquee-rtl 10s linear infinite;
+          white-space: nowrap;
+        }
+      `}</style>
+
       <div className="absolute inset-0 bg-black/55" />
+
+      {/* LEFT-SIDE RESULTS PANEL */}
+      {sortedUploads.length > 0 && (
+        <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-52 flex flex-col gap-2">
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <Bell className="h-4 w-4 text-yellow-400 flex-shrink-0" />
+            <p className="text-xs font-bold text-yellow-400 uppercase tracking-wider">
+              Results Available
+            </p>
+          </div>
+
+          {/* Newest — scrolling ticker */}
+          <div className="rounded-lg border border-yellow-400/50 bg-black/55 backdrop-blur-md p-2.5 overflow-hidden">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <span className="text-[10px] font-bold bg-red-600 text-white px-1.5 py-0.5 rounded-full leading-none">
+                NEW
+              </span>
+              <span className="text-[10px] text-yellow-300 flex-shrink-0">
+                {timeAgo(newest.uploadedAt)}
+              </span>
+            </div>
+            <div className="overflow-hidden w-full">
+              <span className="marquee-rtl text-sm text-white font-semibold">
+                {formatUploadName(newest.filename)}
+              </span>
+            </div>
+          </div>
+
+          {/* Older results — static */}
+          {older.map((u) => (
+            <div
+              key={u.id}
+              className="rounded-lg border border-white/15 bg-black/45 backdrop-blur-md p-2.5"
+            >
+              <div className="flex items-start gap-1.5">
+                <FileText className="h-3.5 w-3.5 text-blue-400 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-gray-200 leading-snug line-clamp-2">
+                  {formatUploadName(u.filename)}
+                </p>
+              </div>
+              <p className="text-[10px] text-gray-500 mt-1 ml-5">{timeAgo(u.uploadedAt)}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Hamburger button */}
       <button
@@ -127,6 +190,7 @@ export default function StudentLogin() {
         </div>
       )}
 
+      {/* CENTER LOGIN CARD — banner removed from here */}
       <div className="relative z-10 w-full max-w-md flex flex-col items-center gap-5">
 
         <div className="flex flex-col items-center gap-3">
@@ -140,27 +204,6 @@ export default function StudentLogin() {
             Rajiv Gandhi University of Knowledge Technologies-Nuzvid
           </p>
         </div>
-
-        {/* Results notice banner */}
-        {uploads.length > 0 && (
-          <div className="w-full rounded-xl border border-blue-400/30 bg-blue-900/40 backdrop-blur-md p-3">
-            <div className="flex items-center gap-2 mb-2">
-              <Bell className="h-4 w-4 text-blue-300 flex-shrink-0" />
-              <p className="text-xs font-semibold text-blue-300 uppercase tracking-wider">Results Available</p>
-            </div>
-            <div className="space-y-1.5">
-              {uploads.map((u) => (
-                <div key={u.id} className="flex items-start gap-2">
-                  <FileText className="h-3.5 w-3.5 text-blue-400 flex-shrink-0 mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white font-medium truncate">{formatUploadName(u.filename)}</p>
-                  </div>
-                  <span className="text-xs text-blue-400 flex-shrink-0 whitespace-nowrap">{timeAgo(u.uploadedAt)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         <Card className="w-full shadow-2xl border border-white/20 bg-white/10 backdrop-blur-md">
           <CardHeader className="border-b border-white/15 pb-5">
