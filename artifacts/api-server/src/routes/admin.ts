@@ -334,6 +334,27 @@ adminRouter.post("/upload-pdf", requireAdmin, upload.single("file"), async (req,
     });
   }
 });
+adminRouter.get("/public-uploads", async (_req, res) => {
+  try {
+    const uploads = await db
+      .select({
+        id: pdfUploadsTable.id,
+        filename: pdfUploadsTable.filename,
+        uploadedAt: pdfUploadsTable.uploadedAt,
+      })
+      .from(pdfUploadsTable)
+      .orderBy(sql`${pdfUploadsTable.uploadedAt} DESC`)
+      .limit(5);
+    return res.json(uploads.map((u) => ({
+      id: u.id,
+      filename: u.filename,
+      uploadedAt: u.uploadedAt.toISOString(),
+    })));
+  } catch (err) {
+    logger.error({ err }, "Public uploads error");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 adminRouter.delete("/uploads/:id", requireAdmin, async (req, res) => {
   try {
