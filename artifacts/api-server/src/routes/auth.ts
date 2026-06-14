@@ -129,16 +129,34 @@ authRouter.get("/student/reset-status/:studentId", async (req, res) => {
     const requestedAt = new Date(resetRow.value).getTime();
     const now = Date.now();
     const readyAt = new Date(requestedAt + RESET_WAIT_MS).toISOString();
+
     if (now - requestedAt >= RESET_WAIT_MS) {
+      // Perform the reset
       await db
         .update(studentsTable)
         .set({ passwordHash: DEFAULT_STUDENT_PASSWORD })
         .where(eq(studentsTable.studentId, studentId));
+
+      // ── VERIFY the update actually persisted ──
+      const [updated] = await db
+        .select({ pw: studentsTable.passwordHash })
+        .from(studentsTable)
+        .where(eq(studentsTable.studentId, studentId));
+
+      if (!updated || updated.pw !== DEFAULT_STUDENT_PASSWORD) {
+        logger.error({ studentId }, "Password reset DB update did not persist");
+        return res.status(500).json({ error: "Password reset failed — please contact the admin." });
+      }
+
+      // Clean up the reset token only after confirmed success
       await db
         .delete(adminSettingsTable)
         .where(eq(adminSettingsTable.key, resetKey));
+
+      logger.info({ studentId }, "Student password reset successfully");
       return res.json({ status: "done", newPassword: DEFAULT_STUDENT_PASSWORD });
     }
+
     return res.json({ status: "waiting", readyAt });
   } catch (err) {
     logger.error({ err }, "Student reset status error");
