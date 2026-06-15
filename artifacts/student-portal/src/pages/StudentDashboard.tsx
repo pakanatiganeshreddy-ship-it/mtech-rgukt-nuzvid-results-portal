@@ -29,6 +29,8 @@ function buildPrintHTML(
   cgpa: number,
   specialization: string
 ): string {
+  const logoUrl = window.location.origin + "/rgukt-logo.png";
+
   const semRows = semesters.map((sem) => `
     <div class="semester">
       <div class="sem-header">
@@ -62,31 +64,50 @@ function buildPrintHTML(
   <title>Results – ${student.studentId}</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; font-size: 12px; color: #111; padding: 24px; }
-    h1 { font-size: 18px; text-align: center; margin-bottom: 4px; }
-    .subtitle { text-align: center; color: #555; margin-bottom: 20px; font-size: 13px; }
-    .info-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; border: 1px solid #ddd; border-radius: 6px; padding: 12px; margin-bottom: 20px; }
+    body {
+      font-family: Arial, sans-serif; font-size: 12px; color: #111; padding: 24px;
+      position: relative;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 380px;
+      height: 380px;
+      background-image: url('${logoUrl}');
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      opacity: 0.07;
+      z-index: 0;
+      pointer-events: none;
+    }
+    h1 { font-size: 18px; text-align: center; margin-bottom: 4px; position: relative; z-index: 1; }
+    .subtitle { text-align: center; color: #555; margin-bottom: 20px; font-size: 13px; position: relative; z-index: 1; }
+    .info-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; border: 1px solid #ddd; border-radius: 6px; padding: 12px; margin-bottom: 20px; position: relative; z-index: 1; }
     .info-grid .label { font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: .5px; }
     .info-grid .value { font-size: 14px; font-weight: bold; margin-top: 2px; }
-    .spec-box { border: 1px solid #ddd; border-radius: 6px; padding: 8px 12px; margin-bottom: 16px; }
+    .spec-box { border: 1px solid #ddd; border-radius: 6px; padding: 8px 12px; margin-bottom: 16px; position: relative; z-index: 1; }
     .spec-box .label { font-size: 10px; color: #666; text-transform: uppercase; }
     .spec-box .value { font-size: 13px; font-weight: bold; margin-top: 2px; }
-    .cgpa-box { text-align: center; background: #e8f0fe; border-radius: 6px; padding: 12px; }
+    .cgpa-box { text-align: center; background: #e8f0fe; border-radius: 6px; padding: 12px; position: relative; z-index: 1; }
     .cgpa-box .label { font-size: 10px; color: #1a56db; text-transform: uppercase; }
     .cgpa-box .value { font-size: 22px; font-weight: bold; color: #1a56db; }
-    .semester { margin-bottom: 20px; break-inside: avoid; }
+    .semester { margin-bottom: 20px; break-inside: avoid; position: relative; z-index: 1; }
     .sem-header { display: flex; justify-content: space-between; background: #f3f4f6; padding: 8px 12px; border-radius: 4px 4px 0 0; border: 1px solid #e5e7eb; font-size: 13px; }
     table { width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; border-top: none; }
     th { background: #f9fafb; text-align: left; padding: 6px 10px; border: 1px solid #e5e7eb; font-size: 11px; text-transform: uppercase; color: #6b7280; }
     td { padding: 6px 10px; border: 1px solid #e5e7eb; }
     .center { text-align: center; }
-    .grading { margin-top: 16px; font-size: 11px; color: #555; text-align: center; }
-    .footer { margin-top: 24px; font-size: 10px; color: #888; text-align: center; border-top: 1px solid #eee; padding-top: 10px; }
+    .grading { margin-top: 16px; font-size: 11px; color: #555; text-align: center; position: relative; z-index: 1; }
+    .footer { margin-top: 24px; font-size: 10px; color: #888; text-align: center; border-top: 1px solid #eee; padding-top: 10px; position: relative; z-index: 1; }
   </style>
 </head>
 <body>
   <h1>RGUKT M.Tech Results Portal</h1>
-  <p class="subtitle">Rajiv Gandhi University of Knowledge Technologies</p>
+  <p class="subtitle">Rajiv Gandhi University of Knowledge Technologies - Nuzvid</p>
   <div class="info-grid">
     <div><div class="label">Student ID</div><div class="value">${student.studentId}</div></div>
     <div><div class="label">Name</div><div class="value">${student.name}</div></div>
@@ -144,7 +165,7 @@ export default function StudentDashboard() {
   const [nameInput, setNameInput] = useState("");
   const [nameSaving, setNameSaving] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
-  const [nameSuccess, setNameSuccess] = useState(false); // ← NEW
+  const [nameSuccess, setNameSuccess] = useState(false);
 
   const changePasswordMutation = useMutation({
     mutationFn: async (data: { currentPassword: string; newPassword: string }) => {
@@ -203,8 +224,8 @@ export default function StudentDashboard() {
       if (!res.ok) throw new Error(data.error || "Failed to save name");
       await queryClient.invalidateQueries({ queryKey: getGetStudentResultsQueryKey(studentId || "") });
       setEditingName(false);
-      setNameSuccess(true); // ← NEW
-      setTimeout(() => setNameSuccess(false), 3000); // ← NEW
+      setNameSuccess(true);
+      setTimeout(() => setNameSuccess(false), 3000);
     } catch (err: unknown) {
       setNameError(err instanceof Error ? err.message : "Failed to save name");
     } finally {
