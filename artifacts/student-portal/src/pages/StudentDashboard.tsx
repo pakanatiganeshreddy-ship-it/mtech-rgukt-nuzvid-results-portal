@@ -140,11 +140,11 @@ export default function StudentDashboard() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
 
-  // ── Name editing state ──
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const [nameSaving, setNameSaving] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
+  const [nameSuccess, setNameSuccess] = useState(false); // ← NEW
 
   const changePasswordMutation = useMutation({
     mutationFn: async (data: { currentPassword: string; newPassword: string }) => {
@@ -203,6 +203,8 @@ export default function StudentDashboard() {
       if (!res.ok) throw new Error(data.error || "Failed to save name");
       await queryClient.invalidateQueries({ queryKey: getGetStudentResultsQueryKey(studentId || "") });
       setEditingName(false);
+      setNameSuccess(true); // ← NEW
+      setTimeout(() => setNameSuccess(false), 3000); // ← NEW
     } catch (err: unknown) {
       setNameError(err instanceof Error ? err.message : "Failed to save name");
     } finally {
@@ -252,6 +254,14 @@ export default function StudentDashboard() {
   return (
     <div className="space-y-8">
 
+      {/* Success toast — name updated */}
+      {nameSuccess && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-green-600 text-white text-sm font-medium px-5 py-3 rounded-full shadow-lg">
+          <Check className="h-4 w-4" />
+          Name updated successfully
+        </div>
+      )}
+
       {/* Change Password Modal */}
       {showPasswordModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -300,7 +310,6 @@ export default function StudentDashboard() {
         <CardHeader className="bg-white border-b pb-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              {/* ── Editable name field ── */}
               {editingName ? (
                 <div className="flex items-center gap-2">
                   <input
@@ -312,30 +321,17 @@ export default function StudentDashboard() {
                     placeholder="Enter your full name"
                     className="text-2xl font-bold border-b-2 border-primary outline-none bg-transparent text-gray-900 w-56 placeholder-gray-300"
                   />
-                  <button
-                    onClick={handleSaveName}
-                    disabled={nameSaving}
-                    title="Save name"
-                    className="text-green-600 hover:text-green-700 disabled:opacity-50"
-                  >
+                  <button onClick={handleSaveName} disabled={nameSaving} title="Save name" className="text-green-600 hover:text-green-700 disabled:opacity-50">
                     <Check className="h-5 w-5" />
                   </button>
-                  <button
-                    onClick={() => handleCancelEditName(student.name)}
-                    title="Cancel"
-                    className="text-gray-400 hover:text-gray-600"
-                  >
+                  <button onClick={() => handleCancelEditName(student.name)} title="Cancel" className="text-gray-400 hover:text-gray-600">
                     <X className="h-5 w-5" />
                   </button>
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
                   <CardTitle className="text-2xl">{student.name}</CardTitle>
-                  <button
-                    onClick={() => handleStartEditName(student.name)}
-                    title="Edit your name"
-                    className="text-gray-300 hover:text-primary transition-colors"
-                  >
+                  <button onClick={() => handleStartEditName(student.name)} title="Edit your name" className="text-gray-300 hover:text-primary transition-colors">
                     <Pencil className="h-4 w-4" />
                   </button>
                 </div>
