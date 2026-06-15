@@ -105,9 +105,9 @@ export default function StudentLogin() {
 
       <div className="absolute inset-0 bg-black/55" />
 
-      {/* LEFT-SIDE RESULTS PANEL — desktop only */}
+      {/* LEFT-SIDE RESULTS PANEL — real laptop only (xl = 1280px+) */}
       {sortedUploads.length > 0 && (
-        <div className="hidden md:flex absolute left-4 top-[62%] -translate-y-1/2 z-10 w-96 flex-col gap-2">
+        <div className="hidden xl:flex absolute left-4 top-[62%] -translate-y-1/2 z-10 w-96 flex-col gap-2">
           <div className="flex items-center gap-2 mb-0.5">
             <Bell className="h-4 w-4 text-yellow-400 flex-shrink-0" />
             <p className="text-xs font-bold text-yellow-400 uppercase tracking-wider">
@@ -186,7 +186,7 @@ export default function StudentLogin() {
         </div>
       )}
 
-      {/* CENTER LOGIN CARD */}
+      {/* CENTER COLUMN */}
       <div className="relative z-10 w-full max-w-md flex flex-col items-center gap-5">
 
         <div className="flex flex-col items-center gap-3">
@@ -285,9 +285,9 @@ export default function StudentLogin() {
           </button>
         </Link>
 
-        {/* MOBILE RESULTS PANEL — below admin button, mobile only */}
+        {/* RESULTS PANEL — mobile & tablets & phone-desktop-mode (below 1280px) */}
         {sortedUploads.length > 0 && (
-          <div className="flex md:hidden flex-col gap-2 w-full pb-4">
+          <div className="flex xl:hidden flex-col gap-2 w-full pb-4">
             <div className="flex items-center gap-2 mb-0.5">
               <Bell className="h-4 w-4 text-yellow-400 flex-shrink-0" />
               <p className="text-xs font-bold text-yellow-400 uppercase tracking-wider">
