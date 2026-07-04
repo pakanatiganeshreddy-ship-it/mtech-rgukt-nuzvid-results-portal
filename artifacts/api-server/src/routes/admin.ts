@@ -419,3 +419,29 @@ adminRouter.get("/login-history", requireAdmin, async (_req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
+
+adminRouter.delete("/login-history/:id", requireAdmin, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+    const [deleted] = await db
+      .delete(loginHistoryTable)
+      .where(eq(loginHistoryTable.id, id))
+      .returning();
+    if (!deleted) return res.status(404).json({ error: "Record not found" });
+    return res.json({ success: true });
+  } catch (err) {
+    logger.error({ err }, "Delete login history record error");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+adminRouter.delete("/login-history", requireAdmin, async (_req, res) => {
+  try {
+    await db.delete(loginHistoryTable);
+    return res.json({ success: true });
+  } catch (err) {
+    logger.error({ err }, "Clear login history error");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
