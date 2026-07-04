@@ -51,6 +51,7 @@ const GRADE_POINTS: Record<string, number> = {
   D: 6,
   E: 5,
   P: 0,      // Pass — audit course with 0 credits, excluded from SGPA
+  R: 0,      // Re-appear / Failed — student must reappear in the exam
   FAIL: 0,
   "FAIL(R)": 0,
   F: 0,
@@ -66,6 +67,7 @@ function normalizeGrade(raw: string): string {
   if (u === "EX") return "EX";
   if (u.startsWith("FAIL")) return "FAIL";
   if (u === "P") return "P";
+  if (u === "R") return "R";
   if (/^[ABCDE]$/.test(u)) return u;
   return raw.trim();
 }
@@ -98,7 +100,7 @@ const ROMAN_NUMERALS: Record<string, number> = {
 const MONTH_PATTERN =
   "January|February|March|April|May|June|July|August|September|October|November|December";
 const GRADE_TOKENS =
-  "\\b(?:Ex|AB|[A-EP]|Fail(?:\\s*\\(R\\))?)\\b";
+  "\\b(?:Ex|AB|[A-EPR]|Fail(?:\\s*\\(R\\))?)\\b";
 
 function parseRGUKTLine(rawLine: string): ExtractedRecord | null {
   const ROMAN: { [k: string]: number } = {
@@ -106,7 +108,7 @@ function parseRGUKTLine(rawLine: string): ExtractedRecord | null {
   };
   const MONTHS =
     "January|February|March|April|May|June|July|August|September|October|November|December";
-  const GRADE = "\\b(?:Ex|AB|[A-EP]|Fail(?:\\s*\\(R\\))?)\\b";
+  const GRADE = "\\b(?:Ex|AB|[A-EPR]|Fail(?:\\s*\\(R\\))?)\\b";
 
   const l = rawLine.replace(/[\t ]+/g, " ").trim();
   if (!l || !/^\d+\s/.test(l)) return null;
@@ -215,6 +217,7 @@ function extractRecordsFromText(text: string): ExtractedRecord[] {
   logger.info({ total: records.length }, "Total records extracted from PDF");
   return records;
 }
+
 adminRouter.post("/upload-pdf", requireAdmin, upload.single("file"), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: "No PDF file uploaded" });
@@ -334,6 +337,7 @@ adminRouter.post("/upload-pdf", requireAdmin, upload.single("file"), async (req,
     });
   }
 });
+
 adminRouter.get("/public-uploads", async (_req, res) => {
   try {
     const uploads = await db
