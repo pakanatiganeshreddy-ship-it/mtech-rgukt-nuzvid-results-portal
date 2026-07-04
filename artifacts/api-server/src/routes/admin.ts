@@ -5,13 +5,12 @@ import fs from "fs";
 import { createRequire } from "node:module";
 
 const _require = createRequire(import.meta.url);
-// pdf-parse v2 exports a class PDFParse — NOT a plain function
 const { PDFParse } = _require("pdf-parse") as {
   PDFParse: new (opts: { data: Buffer }) => { getText: () => Promise<{ text: string }> };
 };
 
-import { db, studentsTable, resultsTable, pdfUploadsTable } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
+import { db, studentsTable, resultsTable, pdfUploadsTable, loginHistoryTable } from "@workspace/db";
+import { eq, sql, desc } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/requireAuth";
 import { logger } from "../lib/logger";
 
@@ -42,19 +41,9 @@ const upload = multer({
   limits: { fileSize: 30 * 1024 * 1024 },
 });
 
-// RGUKT official grading scheme
 const GRADE_POINTS: Record<string, number> = {
-  EX: 10,
-  A: 9,
-  B: 8,
-  C: 7,
-  D: 6,
-  E: 5,
-  P: 0,      // Pass — audit course with 0 credits, excluded from SGPA
-  R: 0,      // Re-appear / Failed — student must reappear in the exam
-  FAIL: 0,
-  "FAIL(R)": 0,
-  F: 0,
+  EX: 10, A: 9, B: 8, C: 7, D: 6, E: 5,
+  P: 0, R: 0, FAIL: 0, "FAIL(R)": 0, F: 0,
 };
 
 function gradeToPoint(grade: string): number {
@@ -83,16 +72,6 @@ interface ExtractedRecord {
   batch: string;
 }
 
-/**
- * Parse a single line from an RGUKT results PDF (pdf-parse v2 output).
- *
- * Format (single-spaced, tabs may appear before Credits/Grade):
- *   S.No  Id.No  Semester-N  Branch  SubjectCode  Specialization  SubjectName  Credits  Grade  Month, Year  Batch
- *
- * Examples:
- *   1 NM2304TE02 Semester-4 CE 21TE2192 Transportation Engineering Dissertation Part -II 16 Ex November, 2025 2023
- *   1 NM2403CP01 Semester-1 ECE 24CSP1103 Communications and Signal processing Digital Communications \t3 \tA March, 2025 2025
- */
 const ROMAN_NUMERALS: Record<string, number> = {
   I: 1, II: 2, III: 3, IV: 4, V: 5, VI: 6,
   VII: 7, VIII: 8, IX: 9, X: 10,
@@ -151,7 +130,6 @@ function parseRGUKTLine(rawLine: string): ExtractedRecord | null {
   const lastNum = allNums[allNums.length - 1];
   const afterLastNum = mid.substring(lastNum.index! + lastNum[0].length).trim();
   const gradeRx = new RegExp(GRADE, "gi");
-
   const grAfterM = afterLastNum.match(new RegExp(GRADE, "i"));
 
   let grade: string;
@@ -191,7 +169,6 @@ function parseRGUKTLine(rawLine: string): ExtractedRecord | null {
 
 function extractRecordsFromText(text: string): ExtractedRecord[] {
   const records: ExtractedRecord[] = [];
-
   const rawLines = text.split("\n");
   const joined: string[] = [];
 
@@ -222,15 +199,11 @@ adminRouter.post("/upload-pdf", requireAdmin, upload.single("file"), async (req,
   if (!req.file) {
     return res.status(400).json({ error: "No PDF file uploaded" });
   }
-
   try {
     const fileBuffer = fs.readFileSync(req.file.path);
-
-    // pdf-parse v2: instantiate PDFParse and call getText()
     const parser = new PDFParse({ data: fileBuffer });
     const pdfData = await parser.getText();
     const text = pdfData.text;
-
     logger.info({ chars: text.length }, "PDF text extracted");
 
     const records = extractRecordsFromText(text);
@@ -238,19 +211,14 @@ adminRouter.post("/upload-pdf", requireAdmin, upload.single("file"), async (req,
     if (records.length === 0) {
       logger.warn({ sample: text.slice(0, 500) }, "No records found in PDF");
       return res.status(400).json({
-        error:
-          "No results could be extracted from this PDF. Please ensure it uses the standard RGUKT results table format.",
+        error: "No results could be extracted from this PDF. Please ensure it uses the standard RGUKT results table format.",
       });
     }
 
-    let inserted = 0;
-    let updated = 0;
-    let errors = 0;
-    let studentsAutoCreated = 0;
+    let inserted = 0, updated = 0, errors = 0, studentsAutoCreated = 0;
 
     for (const record of records) {
       try {
-        // Auto-create student if not exists
         const [existingStudent] = await db
           .select()
           .from(studentsTable)
@@ -259,7 +227,7 @@ adminRouter.post("/upload-pdf", requireAdmin, upload.single("file"), async (req,
         if (!existingStudent) {
           await db.insert(studentsTable).values({
             studentId: record.studentId,
-            name: record.studentId, // admin can rename later
+            name: record.studentId,
             branch: record.branch,
             batch: record.batch,
             passwordHash: "123456",
@@ -269,28 +237,20 @@ adminRouter.post("/upload-pdf", requireAdmin, upload.single("file"), async (req,
 
         const gradePoint = gradeToPoint(record.grade);
 
-        // Check if result already exists (student + semester + subject code)
         const existingResult = await db
           .select()
           .from(resultsTable)
           .where(eq(resultsTable.studentId, record.studentId))
           .then((rows) =>
             rows.find(
-              (r) =>
-                r.semester === record.semester &&
-                r.subjectCode === record.subjectCode
+              (r) => r.semester === record.semester && r.subjectCode === record.subjectCode
             )
           );
 
         if (existingResult) {
           await db
             .update(resultsTable)
-            .set({
-              subjectName: record.subjectName,
-              credits: record.credits,
-              grade: record.grade,
-              gradePoint,
-            })
+            .set({ subjectName: record.subjectName, credits: record.credits, grade: record.grade, gradePoint })
             .where(eq(resultsTable.id, existingResult.id));
           updated++;
         } else {
@@ -332,20 +292,14 @@ adminRouter.post("/upload-pdf", requireAdmin, upload.single("file"), async (req,
     });
   } catch (err) {
     logger.error({ err }, "PDF upload error");
-    return res.status(500).json({
-      error: "Failed to process PDF: " + (err as Error).message,
-    });
+    return res.status(500).json({ error: "Failed to process PDF: " + (err as Error).message });
   }
 });
 
 adminRouter.get("/public-uploads", async (_req, res) => {
   try {
     const uploads = await db
-      .select({
-        id: pdfUploadsTable.id,
-        filename: pdfUploadsTable.filename,
-        uploadedAt: pdfUploadsTable.uploadedAt,
-      })
+      .select({ id: pdfUploadsTable.id, filename: pdfUploadsTable.filename, uploadedAt: pdfUploadsTable.uploadedAt })
       .from(pdfUploadsTable)
       .orderBy(sql`${pdfUploadsTable.uploadedAt} DESC`)
       .limit(5);
@@ -379,16 +333,14 @@ adminRouter.get("/uploads", requireAdmin, async (_req, res) => {
       .select()
       .from(pdfUploadsTable)
       .orderBy(sql`${pdfUploadsTable.uploadedAt} DESC`);
-    return res.json(
-      uploads.map((u) => ({
-        id: u.id,
-        filename: u.filename,
-        uploadedAt: u.uploadedAt.toISOString(),
-        recordsExtracted: u.recordsExtracted,
-        recordsInserted: u.recordsInserted,
-        studentsCreated: u.studentsCreated,
-      }))
-    );
+    return res.json(uploads.map((u) => ({
+      id: u.id,
+      filename: u.filename,
+      uploadedAt: u.uploadedAt.toISOString(),
+      recordsExtracted: u.recordsExtracted,
+      recordsInserted: u.recordsInserted,
+      studentsCreated: u.studentsCreated,
+    })));
   } catch (err) {
     logger.error({ err }, "List uploads error");
     return res.status(500).json({ error: "Internal server error" });
@@ -433,6 +385,37 @@ adminRouter.get("/stats", requireAdmin, async (_req, res) => {
     });
   } catch (err) {
     logger.error({ err }, "Admin stats error");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+adminRouter.get("/login-history", requireAdmin, async (_req, res) => {
+  try {
+    const records = await db
+      .select()
+      .from(loginHistoryTable)
+      .orderBy(desc(loginHistoryTable.loginAt))
+      .limit(500);
+
+    const uniqueStudents = new Set(records.map((r) => r.studentId)).size;
+
+    return res.json({
+      total: records.length,
+      uniqueStudents,
+      records: records.map((r) => ({
+        id: r.id,
+        studentId: r.studentId,
+        studentName: r.studentName,
+        branch: r.branch ?? "",
+        batch: r.batch ?? "",
+        ipAddress: r.ipAddress ?? null,
+        deviceType: r.deviceType ?? "Desktop",
+        userAgent: r.userAgent ?? null,
+        loginAt: r.loginAt.toISOString(),
+      })),
+    });
+  } catch (err) {
+    logger.error({ err }, "Login history error");
     return res.status(500).json({ error: "Internal server error" });
   }
 });
