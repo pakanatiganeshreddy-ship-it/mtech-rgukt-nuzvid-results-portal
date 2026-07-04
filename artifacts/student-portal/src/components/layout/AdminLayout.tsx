@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useGetMe, useLogout, getGetMeQueryKey } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
-import { LogOut, GraduationCap, LayoutDashboard, FileUp, Users, FileText, History } from "lucide-react";
+import { LogOut, GraduationCap, LayoutDashboard, FileUp, Users, FileText, History, Clock } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -45,6 +45,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     { href: "/admin/uploads", icon: History, label: "Uploaded PDFs" },
     { href: "/admin/students", icon: Users, label: "Students" },
     { href: "/admin/results", icon: FileText, label: "All Results" },
+    { href: "/admin/login-history", icon: Clock, label: "Login History" },
   ];
 
   return (
