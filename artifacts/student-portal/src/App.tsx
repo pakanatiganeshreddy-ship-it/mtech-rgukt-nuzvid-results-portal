@@ -16,6 +16,7 @@ import AdminStudents from "@/pages/AdminStudents";
 import AdminStudentDetail from "@/pages/AdminStudentDetail";
 import AdminResults from "@/pages/AdminResults";
 import AdminUploads from "@/pages/AdminUploads";
+import AdminLoginHistory from "@/pages/AdminLoginHistory";
 
 import { StudentLayout } from "@/components/layout/StudentLayout";
 import { AdminLayout } from "@/components/layout/AdminLayout";
@@ -70,6 +71,12 @@ function Router() {
       <Route path="/admin/uploads">
         <AdminLayout>
           <AdminUploads />
+        </AdminLayout>
+      </Route>
+
+      <Route path="/admin/login-history">
+        <AdminLayout>
+          <AdminLoginHistory />
         </AdminLayout>
       </Route>
 
