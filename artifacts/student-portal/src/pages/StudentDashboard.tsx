@@ -23,6 +23,11 @@ interface SemesterResult {
   }[];
 }
 
+function isFailGrade(grade: string): boolean {
+  const g = grade.trim().toUpperCase();
+  return g === "R" || g === "FAIL" || g === "F" || g.startsWith("FAIL");
+}
+
 function buildPrintHTML(
   student: { studentId: string; name: string; branch: string; batch: string },
   semesters: SemesterResult[],
@@ -46,11 +51,11 @@ function buildPrintHTML(
         </thead>
         <tbody>
           ${sem.results.map((r) => `
-            <tr>
+            <tr${isFailGrade(r.grade) ? ' style="background:#fff5f5;"' : ""}>
               <td>${r.subjectCode}</td>
               <td>${stripSpec(r.subjectName, specialization)}</td>
               <td class="center">${r.credits}</td>
-              <td class="center"><strong>${r.grade}</strong></td>
+              <td class="center"><strong style="${isFailGrade(r.grade) ? "color:#dc2626;" : ""}">${r.grade}</strong></td>
               <td class="center">${r.gradePoint}</td>
             </tr>`).join("")}
         </tbody>
@@ -185,7 +190,7 @@ function buildPrintHTML(
 
     ${semRows}
 
-    <p class="grading">Grading Scale: EX=10 &nbsp; A=9 &nbsp; B=8 &nbsp; C=7 &nbsp; D=6 &nbsp; E=5 &nbsp; Fail=0 &nbsp;|&nbsp; CGPA × 10 = Aggregate %</p>
+    <p class="grading">Grading Scale: EX=10 &nbsp; A=9 &nbsp; B=8 &nbsp; C=7 &nbsp; D=6 &nbsp; E=5 &nbsp; R=0 (Re-appear) &nbsp; Fail=0 &nbsp;|&nbsp; CGPA × 10 = Aggregate %</p>
     <p class="footer">Generated on ${new Date().toLocaleString("en-IN")} &nbsp;|&nbsp; RGUKT M.Tech Results Portal</p>
   </div>
 
@@ -514,14 +519,24 @@ export default function StudentDashboard() {
                       </TableHeader>
                       <TableBody>
                         {sem.results.map((result) => (
-                          <TableRow key={result.id}>
+                          <TableRow
+                            key={result.id}
+                            className={isFailGrade(result.grade) ? "bg-red-50" : ""}
+                          >
                             <TableCell className="font-medium text-gray-600">{result.subjectCode}</TableCell>
                             <TableCell>{stripSpec(result.subjectName, specialization)}</TableCell>
                             <TableCell className="text-center">{result.credits}</TableCell>
                             <TableCell className="text-center">
-                              <span className={`font-semibold ${result.grade === 'Fail' ? 'text-destructive' : 'text-gray-900'}`}>
-                                {result.grade}
-                              </span>
+                              {isFailGrade(result.grade) ? (
+                                <span className="inline-flex items-center gap-1 font-bold text-red-600">
+                                  {result.grade}
+                                  <span className="text-xs font-normal bg-red-100 text-red-700 px-1.5 py-0.5 rounded">
+                                    Re-appear
+                                  </span>
+                                </span>
+                              ) : (
+                                <span className="font-semibold text-gray-900">{result.grade}</span>
+                              )}
                             </TableCell>
                             <TableCell className="text-center">{result.gradePoint}</TableCell>
                           </TableRow>
