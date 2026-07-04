@@ -5,6 +5,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 
+function isFailGrade(grade: string): boolean {
+  const g = grade.trim().toUpperCase();
+  return g === "R" || g === "FAIL" || g === "F" || g.startsWith("FAIL");
+}
+
 function computeSpecialization(subjectNames: string[]): string {
   if (subjectNames.length < 2) return "";
   const tokens = subjectNames.map(n => n.split(" "));
@@ -131,14 +136,24 @@ export default function AdminStudentDetail() {
                     </TableHeader>
                     <TableBody>
                       {semester.results.map((result) => (
-                        <TableRow key={result.id}>
+                        <TableRow
+                          key={result.id}
+                          className={isFailGrade(result.grade) ? "bg-red-50" : ""}
+                        >
                           <TableCell className="font-medium text-gray-600">{result.subjectCode}</TableCell>
                           <TableCell>{stripSpec(result.subjectName, specialization)}</TableCell>
                           <TableCell className="text-center">{result.credits}</TableCell>
                           <TableCell className="text-center">
-                            <span className={`font-semibold ${result.grade === 'Fail' ? 'text-destructive' : 'text-gray-900'}`}>
-                              {result.grade}
-                            </span>
+                            {isFailGrade(result.grade) ? (
+                              <span className="inline-flex items-center gap-1 font-bold text-red-600">
+                                {result.grade}
+                                <span className="text-xs font-normal bg-red-100 text-red-700 px-1.5 py-0.5 rounded">
+                                  Re-appear
+                                </span>
+                              </span>
+                            ) : (
+                              <span className="font-semibold text-gray-900">{result.grade}</span>
+                            )}
                           </TableCell>
                           <TableCell className="text-center">{result.gradePoint}</TableCell>
                         </TableRow>
