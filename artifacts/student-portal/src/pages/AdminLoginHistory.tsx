@@ -5,8 +5,18 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useQuery } from "@tanstack/react-query";
-import { Users, Clock, Monitor, Smartphone, Search, RefreshCw } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Users, Clock, Monitor, Smartphone, Search, RefreshCw, Trash2, AlertTriangle } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface LoginRecord {
   id: number;
@@ -52,6 +62,12 @@ function timeAgo(iso: string) {
 
 export default function AdminLoginHistory() {
   const [search, setSearch] = useState("");
+  const [clearAllOpen, setClearAllOpen] = useState(false);
+  const [deleteOneOpen, setDeleteOneOpen] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const queryClient = useQueryClient();
 
   const { data, isLoading, refetch, isFetching } = useQuery<LoginHistoryResponse>({
     queryKey: ["admin-login-history"],
@@ -73,14 +89,61 @@ export default function AdminLoginHistory() {
     );
   });
 
+  const handleDeleteOne = (id: number) => {
+    setPendingDeleteId(id);
+    setDeleteOneOpen(true);
+  };
+
+  const confirmDeleteOne = async () => {
+    if (!pendingDeleteId) return;
+    setActionLoading(true);
+    try {
+      await fetch(`/api/admin/login-history/${pendingDeleteId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      queryClient.invalidateQueries({ queryKey: ["admin-login-history"] });
+    } finally {
+      setActionLoading(false);
+      setDeleteOneOpen(false);
+      setPendingDeleteId(null);
+    }
+  };
+
+  const confirmClearAll = async () => {
+    setActionLoading(true);
+    try {
+      await fetch("/api/admin/login-history", {
+        method: "DELETE",
+        credentials: "include",
+      });
+      queryClient.invalidateQueries({ queryKey: ["admin-login-history"] });
+    } finally {
+      setActionLoading(false);
+      setClearAllOpen(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Student Login History</h1>
-        <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching} className="gap-2">
-          <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching} className="gap-2">
+            <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setClearAllOpen(true)}
+            disabled={!data?.records.length || isLoading}
+            className="gap-2"
+          >
+            <Trash2 className="h-4 w-4" />
+            Clear All
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -151,6 +214,7 @@ export default function AdminLoginHistory() {
                     <TableHead className="w-[120px]">Device</TableHead>
                     <TableHead className="w-[130px]">IP Address</TableHead>
                     <TableHead className="w-[200px]">Login Time</TableHead>
+                    <TableHead className="w-[60px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -176,6 +240,16 @@ export default function AdminLoginHistory() {
                         <div className="text-sm text-gray-900">{formatDate(record.loginAt)}</div>
                         <div className="text-xs text-gray-400">{timeAgo(record.loginAt)}</div>
                       </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-gray-400 hover:text-red-500 hover:bg-red-50"
+                          onClick={() => handleDeleteOne(record.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -184,6 +258,56 @@ export default function AdminLoginHistory() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete One Confirmation */}
+      <AlertDialog open={deleteOneOpen} onOpenChange={setDeleteOneOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Delete this record?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove this login record. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={actionLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteOne}
+              disabled={actionLoading}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {actionLoading ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Clear All Confirmation */}
+      <AlertDialog open={clearAllOpen} onOpenChange={setClearAllOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Clear all login history?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete all {data?.total ?? 0} login records. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={actionLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmClearAll}
+              disabled={actionLoading}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {actionLoading ? "Clearing..." : "Clear All Records"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
