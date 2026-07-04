@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, studentsTable, adminSettingsTable } from "@workspace/db";
+import { db, studentsTable, adminSettingsTable, loginHistoryTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { requireStudent, requireAdmin } from "../middlewares/requireAuth";
@@ -18,6 +18,21 @@ const ADMIN_USERNAME = "admin";
 const DEFAULT_ADMIN_PASSWORD = "admin123";
 const DEFAULT_STUDENT_PASSWORD = "123456";
 const RESET_WAIT_MS = 60 * 60 * 1000;
+
+function detectDevice(userAgent: string | undefined): string {
+  if (!userAgent) return "Unknown";
+  const ua = userAgent.toLowerCase();
+  if (/mobile|android|iphone|ipad|ipod|blackberry|windows phone/.test(ua)) return "Mobile";
+  return "Desktop";
+}
+
+function getClientIp(req: import("express").Request): string {
+  const forwarded = req.headers["x-forwarded-for"];
+  if (forwarded) {
+    return (Array.isArray(forwarded) ? forwarded[0] : forwarded).split(",")[0].trim();
+  }
+  return req.socket?.remoteAddress ?? req.ip ?? "Unknown";
+}
 
 export const authRouter = Router();
 
@@ -40,6 +55,22 @@ authRouter.post("/student/login", async (req, res) => {
     req.session.role = "student";
     req.session.studentId = student.studentId;
     req.session.name = student.name;
+
+    // Record login history (fire-and-forget — does not block response)
+    const ip = getClientIp(req);
+    const ua = req.headers["user-agent"];
+    db.insert(loginHistoryTable)
+      .values({
+        studentId: student.studentId,
+        studentName: student.name,
+        branch: student.branch ?? null,
+        batch: student.batch ?? null,
+        ipAddress: ip,
+        userAgent: ua ?? null,
+        deviceType: detectDevice(ua),
+      })
+      .catch((err) => logger.error({ err }, "Failed to record login history"));
+
     return res.json({ studentId: student.studentId, name: student.name, role: "student" });
   } catch (err) {
     logger.error({ err }, "Student login error");
