@@ -41,7 +41,11 @@ app.use(
 
 app.use("/api", router);
 
-const frontendDist = path.resolve(process.cwd(), "artifacts/student-portal/dist/public");
+const workspaceRoot = process.cwd().endsWith(path.join("artifacts", "api-server"))
+  ? path.resolve(process.cwd(), "../..")
+  : process.cwd();
+
+const frontendDist = path.resolve(workspaceRoot, "artifacts/student-portal/dist/public");
 app.use(express.static(frontendDist));
 
 app.get("{*splat}", (_req, res) => {
