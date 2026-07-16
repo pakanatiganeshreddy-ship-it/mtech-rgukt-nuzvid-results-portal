@@ -23,10 +23,39 @@ studentsRouter.get("/", requireAdmin, async (req, res) => {
     if (branch) {
       rows = rows.filter((r) => r.branch.toLowerCase() === branch.toLowerCase());
     }
-    return res.json(rows.map((r) => ({
-      id: r.id, studentId: r.studentId, name: r.name,
-      branch: r.branch, batch: r.batch, createdAt: r.createdAt.toISOString(),
-    })));
+
+    const allResults = await db.select().from(resultsTable);
+    const resultsByStudent = new Map<string, typeof allResults>();
+    for (const r of allResults) {
+      if (!resultsByStudent.has(r.studentId)) resultsByStudent.set(r.studentId, []);
+      resultsByStudent.get(r.studentId)!.push(r);
+    }
+
+    return res.json(rows.map((r) => {
+      const studentResults = resultsByStudent.get(r.studentId) ?? [];
+      const semMap = new Map<number, typeof studentResults>();
+      for (const res of studentResults) {
+        if (!semMap.has(res.semester)) semMap.set(res.semester, []);
+        semMap.get(res.semester)!.push(res);
+      }
+      const semesters = Array.from(semMap.entries()).sort(([a], [b]) => a - b);
+      const allCredits = semesters.reduce(
+        (s, [, results]) => s + results.reduce((c, r) => c + r.credits, 0), 0,
+      );
+      const cgpa = allCredits > 0
+        ? Math.round((semesters.reduce(
+            (s, [, results]) => s + calcSGPA(results) * results.reduce((c, r) => c + r.credits, 0), 0,
+          ) / allCredits) * 100) / 100
+        : null;
+      const latestSem = semesters[semesters.length - 1];
+      const sgpa = latestSem ? calcSGPA(latestSem[1]) : null;
+      const latestSemester = latestSem ? latestSem[0] : null;
+      return {
+        id: r.id, studentId: r.studentId, name: r.name,
+        branch: r.branch, batch: r.batch, createdAt: r.createdAt.toISOString(),
+        cgpa, sgpa, latestSemester,
+      };
+    }));
   } catch (err) {
     logger.error({ err }, "List students error");
     return res.status(500).json({ error: "Internal server error" });
@@ -73,7 +102,6 @@ studentsRouter.post("/:studentId/reset-password", requireAdmin, async (req, res)
   }
 });
 
-// ── Student updates their own display name ─────────────────────────────────
 studentsRouter.patch("/:studentId/profile", requireStudent, async (req, res) => {
   const { studentId } = req.params;
   if (req.session.studentId !== studentId) {
