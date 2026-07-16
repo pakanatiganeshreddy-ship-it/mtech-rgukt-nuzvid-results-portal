@@ -182,50 +182,74 @@ export default function AdminStudents() {
                     <TableHead>Student ID</TableHead>
                     <TableHead>Branch</TableHead>
                     <TableHead>Batch</TableHead>
+                    <TableHead className="text-center">Latest SGPA</TableHead>
+                    <TableHead className="text-center">CGPA</TableHead>
                     <TableHead className="w-[100px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {students.map((student) => (
-                    <TableRow key={student.id}>
-                      <TableCell
-                        className="font-medium text-primary cursor-pointer hover:underline"
-                        onClick={() => setLocation(`/admin/students/${student.studentId}`)}
-                      >
-                        {student.studentId}
-                      </TableCell>
-                      <TableCell>{student.branch}</TableCell>
-                      <TableCell>{student.batch}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 h-8 w-8 p-0"
-                            title="Reset password to 123456"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setResetTarget({ studentId: student.studentId, name: student.name });
-                              setResetSuccess(false);
-                            }}
-                          >
-                            <RotateCcw className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeleteTarget({ studentId: student.studentId, name: student.name });
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {students.map((student) => {
+                    const s = student as typeof student & { sgpa?: number | null; cgpa?: number | null; latestSemester?: number | null };
+                    return (
+                      <TableRow key={student.id}>
+                        <TableCell
+                          className="font-medium text-primary cursor-pointer hover:underline"
+                          onClick={() => setLocation(`/admin/students/${student.studentId}`)}
+                        >
+                          {student.studentId}
+                        </TableCell>
+                        <TableCell>{student.branch}</TableCell>
+                        <TableCell>{student.batch}</TableCell>
+                        <TableCell className="text-center">
+                          {s.sgpa != null ? (
+                            <span className="font-medium">
+                              {s.sgpa.toFixed(2)}
+                              {s.latestSemester != null && (
+                                <span className="text-xs text-gray-400 ml-1">(Sem {s.latestSemester})</span>
+                              )}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 text-sm">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {s.cgpa != null ? (
+                            <span className="font-semibold text-primary">{s.cgpa.toFixed(2)}</span>
+                          ) : (
+                            <span className="text-gray-400 text-sm">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 h-8 w-8 p-0"
+                              title="Reset password to 123456"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setResetTarget({ studentId: student.studentId, name: student.name });
+                                setResetSuccess(false);
+                              }}
+                            >
+                              <RotateCcw className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteTarget({ studentId: student.studentId, name: student.name });
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
