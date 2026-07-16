@@ -96,7 +96,8 @@ function parseRGUKTLine(rawLine: string): ExtractedRecord | null {
   const sidM = l.match(/\b(NM\d{4}[A-Z]{2}\d{2})\b/);
   if (!sidM) return null;
 
-  const semM = l.match(/\bSemester-([IVX]+|\d+)\b/i);
+  // FIXED: support both "Sem-1" and "Semester-1" formats
+  const semM = l.match(/\bSem(?:ester)?-([IVX]+|\d+)\b/i);
   if (!semM) return null;
   const semStr = semM[1].toUpperCase();
   const semester = /^\d+$/.test(semStr)
@@ -104,7 +105,8 @@ function parseRGUKTLine(rawLine: string): ExtractedRecord | null {
     : ROMAN[semStr] ?? 0;
   if (!semester) return null;
 
-  const brM = l.match(/\bSemester-(?:\d+|[IVX]+)\s+([A-Z]{2,4})\b/i);
+  // FIXED: support both "Sem-1" and "Semester-1" formats
+  const brM = l.match(/\bSem(?:ester)?-(?:\d+|[IVX]+)\s+([A-Z]{2,4})\b/i);
   if (!brM) return null;
 
   const scM = l.match(/\b(\d{2}[A-Z]{2,6}\d{3,6}[A-Z]?)\b/);
